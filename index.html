@@ -825,11 +825,19 @@ function toast(msg, type='info') {
 let mapImg = new Image();
 mapImg.crossOrigin = 'anonymous';
 
+const MAP_PATHS = {
+  erangel: 'Erangel.png',
+  miramar: 'Miramar.png',
+  rondo:   'rondo.png',
+  sanhok:  'sanhok.png',
+};
+
 function loadMapKey(key) {
   if (key === 'custom') { document.getElementById('file-map').click(); return; }
+  const src = MAP_PATHS[key] || (key + '.png');
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.src = key + '.png';
+  img.src = src;
   img.onload = () => {
     mapImg = img;
     WORLD_W = img.naturalWidth || 2048;
@@ -838,9 +846,9 @@ function loadMapKey(key) {
     draw();
   };
   img.onerror = () => {
-    // map image not found, draw blank
+    toast('MAP NOT FOUND: '+src, 'warn');
     WORLD_W = 2048; WORLD_H = 2048;
-    mapImg = img;
+    mapImg = new Image();
     draw();
   };
   state.mapKey = key;
@@ -1477,41 +1485,61 @@ async function addTournament() {
 async function addDay() {
   const input=document.getElementById('in-day');
   const name=input.value.trim();
-  if(!name||!state.tournamentId){toast('SELECT TOURNAMENT FIRST','warn');return;}
+  if(!name){toast('ENTER A DAY NAME','warn');return;}
+  if(!state.tournamentId){toast('SELECT TOURNAMENT FIRST','warn');return;}
   input.value='';
 
   const orderIdx = days.filter(d=>d.tournament_id===state.tournamentId).length;
   if (sb && currentUser) {
     setSyncState('syncing');
-    const {data,error}=await sb.from('days').insert({name,tournament_id:state.tournamentId,user_id:currentUser.id,order_index:orderIdx}).select().single();
-    if(error){toast('ERROR: '+error.message,'err');return;}
+    const {data,error}=await sb.from('days').insert({
+      name,
+      tournament_id:state.tournamentId,
+      user_id:currentUser.id,
+      order_index:orderIdx
+    }).select().single();
+    if(error){setSyncState('error');toast('DAY ERROR: '+error.message,'err');console.error(error);return;}
     days.push(data);
     state.dayId=data.id;
     setSyncState('saved');
+    toast('Day added: '+name,'ok');
   } else {
     const fake={id:'local_'+Date.now(), name, tournament_id:state.tournamentId};
     days.push(fake);
     state.dayId=fake.id;
   }
   state.matchId=null; state.activeTeamId=null;
-  setStatus('DAY: '+name);
+  setStatus('DAY: '+name+' — NOW ADD A MATCH');
   refreshDropdowns();
+  renderTeamList();
 }
 
 async function addMatch() {
   const input=document.getElementById('in-match');
   const name=input.value.trim();
-  if(!name||!state.dayId){toast('SELECT DAY FIRST','warn');return;}
+  if(!name){toast('ENTER A MATCH NAME','warn');return;}
+  if(!state.dayId){toast('SELECT DAY FIRST','warn');return;}
   input.value='';
 
   if (sb && currentUser) {
     setSyncState('syncing');
-    const {data,error}=await sb.from('matches').insert({name,day_id:state.dayId,map_key:state.mapKey,user_id:currentUser.id}).select().single();
-    if(error){toast('ERROR: '+error.message,'err');return;}
+    const {data,error}=await sb.from('matches').insert({
+      name,
+      day_id:state.dayId,
+      map_key:state.mapKey,
+      user_id:currentUser.id
+    }).select().single();
+    if(error){setSyncState('error');toast('MATCH ERROR: '+error.message,'err');console.error(error);return;}
     matches.push(data);
     state.matchId=data.id;
-    await createDefaultTeams(data.id);
+    try {
+      await createDefaultTeams(data.id);
+    } catch(e) {
+      toast('TEAMS ERROR: '+e.message,'err');
+      console.error(e);
+    }
     setSyncState('saved');
+    toast('Match added: '+name,'ok');
   } else {
     const fake={id:'local_'+Date.now(), name, day_id:state.dayId, map_key:state.mapKey};
     matches.push(fake);
@@ -1659,13 +1687,29 @@ function refreshDropdowns() {
   });
 }
 
-document.getElementById('sel-tournament').onchange=function(){
+document.getElementById('sel-tournament').onchange=async function(){
   state.tournamentId=this.value||null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
-  overlayState={}; refreshDropdowns(); renderTeamList(); draw();
+  overlayState={};
+  if (state.tournamentId && sb) {
+    const {data,error}=await sb.from('days').select('*').eq('tournament_id',state.tournamentId).order('order_index');
+    if (!error) {
+      days = days.filter(d=>d.tournament_id!==state.tournamentId);
+      days.push(...data);
+    }
+  }
+  refreshDropdowns(); renderTeamList(); draw();
 };
-document.getElementById('sel-day').onchange=function(){
+document.getElementById('sel-day').onchange=async function(){
   state.dayId=this.value||null; state.matchId=null; state.activeTeamId=null;
-  overlayState={}; refreshDropdowns(); renderTeamList(); draw();
+  overlayState={};
+  if (state.dayId && sb) {
+    const {data,error}=await sb.from('matches').select('*').eq('day_id',state.dayId).order('created_at');
+    if (!error) {
+      matches = matches.filter(m=>m.day_id!==state.dayId);
+      matches.push(...data);
+    }
+  }
+  refreshDropdowns(); renderTeamList(); draw();
 };
 document.getElementById('sel-match').onchange=async function(){
   state.matchId=this.value||null; state.activeTeamId=null;
