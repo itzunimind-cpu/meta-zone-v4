@@ -1613,43 +1613,81 @@ async function deleteSelected(type) {
     const t = tournaments.find(x=>x.id===state.tournamentId);
     if (!t || !confirm(`Delete tournament "${t.name}" and ALL its data?`)) return;
     if (sb && !String(t.id).startsWith('local_')) {
+      // cascade: delete shapes → teams → matches → days → tournament
+      const dIds = days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
+      const mIds = matches.filter(m=>dIds.includes(m.day_id)).map(m=>m.id);
+      const tIds = teams.filter(tm=>mIds.includes(tm.match_id)).map(tm=>tm.id);
+      if (tIds.length)  await sb.from('shapes').delete().in('team_id', tIds);
+      if (tIds.length)  await sb.from('teams').delete().in('id', tIds);
+      if (mIds.length)  await sb.from('matches').delete().in('id', mIds);
+      if (dIds.length)  await sb.from('days').delete().in('id', dIds);
       const {error}=await sb.from('tournaments').delete().eq('id',t.id);
-      if (error){toast('DELETE ERROR','err');return;}
+      if (error){toast('DELETE ERROR: '+error.message,'err');return;}
     }
     tournaments = tournaments.filter(x=>x.id!==t.id);
-    // Clean up related
-    const dIds = days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
-    days = days.filter(d=>d.tournament_id!==t.id);
-    const mIds = matches.filter(m=>dIds.includes(m.day_id)).map(m=>m.id);
-    matches = matches.filter(m=>!dIds.includes(m.day_id));
-    teams = teams.filter(tm=>!mIds.includes(tm.match_id));
+    const dIds2 = days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
+    const mIds2 = matches.filter(m=>dIds2.includes(m.day_id)).map(m=>m.id);
+    days    = days.filter(d=>d.tournament_id!==t.id);
+    matches = matches.filter(m=>!dIds2.includes(m.day_id));
+    teams   = teams.filter(tm=>!mIds2.includes(tm.match_id));
+    shapesCache = {};
     state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
+
   } else if (type==='day') {
     if (!state.dayId) return;
     const d = days.find(x=>x.id===state.dayId);
-    if (!d || !confirm(`Delete day "${d.name}"?`)) return;
+    if (!d || !confirm(`Delete day "${d.name}" and ALL its matches?`)) return;
     if (sb && !String(d.id).startsWith('local_')) {
+      // cascade: shapes → teams → matches → day
+      const mIds = matches.filter(m=>m.day_id===d.id).map(m=>m.id);
+      const tIds = teams.filter(tm=>mIds.includes(tm.match_id)).map(tm=>tm.id);
+      if (tIds.length)  await sb.from('shapes').delete().in('team_id', tIds);
+      if (tIds.length)  await sb.from('teams').delete().in('id', tIds);
+      if (mIds.length)  await sb.from('matches').delete().in('id', mIds);
       const {error}=await sb.from('days').delete().eq('id',d.id);
-      if (error){toast('DELETE ERROR','err');return;}
+      if (error){toast('DELETE ERROR: '+error.message,'err');return;}
     }
-    days = days.filter(x=>x.id!==d.id);
-    const mIds = matches.filter(m=>m.day_id===d.id).map(m=>m.id);
+    const mIds2 = matches.filter(m=>m.day_id===d.id).map(m=>m.id);
+    days    = days.filter(x=>x.id!==d.id);
     matches = matches.filter(m=>m.day_id!==d.id);
-    teams = teams.filter(tm=>!mIds.includes(tm.match_id));
+    teams   = teams.filter(tm=>!mIds2.includes(tm.match_id));
+    shapesCache = {};
     state.dayId=null; state.matchId=null; state.activeTeamId=null;
+    // re-fetch fresh days for current tournament so dropdown is correct
+    if (sb && state.tournamentId) {
+      const {data}=await sb.from('days').select('*').eq('tournament_id',state.tournamentId).order('order_index');
+      if (data) {
+        days = days.filter(d2=>d2.tournament_id!==state.tournamentId);
+        days.push(...data);
+      }
+    }
+
   } else if (type==='match') {
     if (!state.matchId) return;
     const m = matches.find(x=>x.id===state.matchId);
-    if (!m || !confirm(`Delete match "${m.name}"?`)) return;
+    if (!m || !confirm(`Delete match "${m.name}" and all its drawings?`)) return;
     if (sb && !String(m.id).startsWith('local_')) {
+      // cascade: shapes → teams → match
+      const tIds = teams.filter(t=>t.match_id===m.id).map(t=>t.id);
+      if (tIds.length) await sb.from('shapes').delete().in('team_id', tIds);
+      if (tIds.length) await sb.from('teams').delete().in('id', tIds);
       const {error}=await sb.from('matches').delete().eq('id',m.id);
-      if (error){toast('DELETE ERROR','err');return;}
+      if (error){toast('DELETE ERROR: '+error.message,'err');return;}
     }
+    teams   = teams.filter(t=>t.match_id!==m.id);
     matches = matches.filter(x=>x.id!==m.id);
-    teams = teams.filter(t=>t.match_id!==m.id);
     shapesCache = {};
     state.matchId=null; state.activeTeamId=null;
+    // re-fetch fresh matches for current day
+    if (sb && state.dayId) {
+      const {data}=await sb.from('matches').select('*').eq('day_id',state.dayId).order('created_at');
+      if (data) {
+        matches = matches.filter(m2=>m2.day_id!==state.dayId);
+        matches.push(...data);
+      }
+    }
   }
+
   overlayState={};
   refreshDropdowns();
   renderTeamList();
