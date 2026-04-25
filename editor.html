@@ -1481,8 +1481,15 @@ function onPointerDown(e) {
     pendingPin={wx,wy}; showPinPopup(screenX,screenY,state.mode==='fight'); return;
   }
   if(state.mode==='path'){
-    if(!pathDrawing){ pathDrawing=true; pathPoints=[{x:wx,y:wy}]; document.getElementById('path-indicator').classList.add('show'); }
-    else{ pathPoints.push({x:wx,y:wy}); }
+    // Touch: start freehand path on touchstart, points added in touchmove, finished on touchend
+    // Desktop: tap to place points, dblclick to finish (unchanged)
+    if(e.touches){
+      pathDrawing=true; pathPoints=[{x:wx,y:wy}];
+      document.getElementById('path-indicator').classList.add('show');
+    } else {
+      if(!pathDrawing){ pathDrawing=true; pathPoints=[{x:wx,y:wy}]; document.getElementById('path-indicator').classList.add('show'); }
+      else{ pathPoints.push({x:wx,y:wy}); }
+    }
     draw(); return;
   }
   if(state.mode==='zone'){
@@ -1522,6 +1529,8 @@ function onPointerMove(e) {
     if(hit) showHoverTip(screenX,screenY,hit); else hideHoverTip();
   }
   if(pathDrawing&&pathPoints.length>0){
+    // Touch: continuously add points as finger drags (freehand)
+    if(e.touches) pathPoints.push({x:wx,y:wy});
     preview={type:'path',points:[...pathPoints,{x:wx,y:wy}],tag:'rotation',time:state.time};
     draw(); return;
   }
@@ -1545,7 +1554,18 @@ function onPointerUp(e) {
   }
 
   if(isPanning){ isPanning=false; canvas.classList.remove('panning-active'); return; }
-  if(state.mode==='path') return;
+  if(state.mode==='path'){
+    // Touch: finger lifted = commit the freehand path
+    if(e.changedTouches&&pathDrawing&&pathPoints.length>=2){
+      const shapes=getActiveShapes();
+      if(shapes){
+        const shape={type:'path',points:[...pathPoints],tag:'rotation',time:state.time};
+        shapes.push(shape); queueForSave(shape);
+      }
+      cancelPath(); draw();
+    }
+    return;
+  }
   const {wx,wy}=evCoords(e);
   if(state.mode==='zone'&&circleP1){
     const p1=circleP1, dist=Math.sqrt((wx-p1.x)**2+(wy-p1.y)**2);
