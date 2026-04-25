@@ -1410,6 +1410,13 @@ function onKeyUp(e) {
   if(e.code==='Space'){ spaceDown=false; canvas.classList.remove('panning','panning-active'); }
 }
 
+// ── Touch pinch state (E2) ──────────────────────────────
+let pinchActive=false, pinchDist0=0, pinchMid0={x:0,y:0}, pinchZoom0=1, pinchPan0={x:0,y:0};
+function getTouchDist(t1,t2){ return Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY); }
+function getTouchMid(t1,t2,rect,scaleX,scaleY){
+  return { x:((t1.clientX+t2.clientX)/2-rect.left)*scaleX, y:((t1.clientY+t2.clientY)/2-rect.top)*scaleY };
+}
+
 // ══════════════════════════════════════════════════════
 // CANVAS SETUP
 // ══════════════════════════════════════════════════════
@@ -1439,10 +1446,32 @@ function resizeCanvas() {
 // ══════════════════════════════════════════════════════
 function onPointerDown(e) {
   e.preventDefault(); closeColorPicker();
+
+  // E2: Two-finger pinch → start pinch mode, cancel any drawing
+  if(e.touches&&e.touches.length===2){
+    pinchActive=true;
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+    pinchDist0=getTouchDist(e.touches[0],e.touches[1]);
+    pinchMid0=getTouchMid(e.touches[0],e.touches[1],rect,scaleX,scaleY);
+    pinchZoom0=zoom; pinchPan0={x:panX,y:panY};
+    // Cancel any active single-touch drawing
+    if(pathDrawing) cancelPath();
+    circleP1=null; drawing=false; isPanning=false; preview=null; draw();
+    return;
+  }
+
+  // E1: single-touch or mouse — guard: if two touches somehow active, bail
+  if(e.touches&&e.touches.length>1) return;
+
   const {wx,wy,screenX,screenY}=evCoords(e);
   if(spaceDown){
     isPanning=true; panSX=screenX; panSY=screenY; panPX=panX; panPY=panY;
     canvas.classList.add('panning-active'); return;
+  }
+  // Touch single-finger pan (no space key on mobile) — only when not in annotation mode
+  if(e.touches&&!isAnnotationMode){
+    isPanning=true; panSX=screenX; panSY=screenY; panPX=panX; panPY=panY; return;
   }
   if(!isAnnotationMode) return;
   const shapes=getActiveShapes();
@@ -1464,6 +1493,28 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   e.preventDefault();
+
+  // E2: Pinch gesture
+  if(pinchActive&&e.touches&&e.touches.length===2){
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+    const newDist=getTouchDist(e.touches[0],e.touches[1]);
+    const newMid=getTouchMid(e.touches[0],e.touches[1],rect,scaleX,scaleY);
+    const scale=newDist/pinchDist0;
+    const nz=Math.max(.05,Math.min(40,pinchZoom0*scale));
+    // Pan: keep midpoint anchored
+    panX=newMid.x - (pinchMid0.x-pinchPan0.x)*nz/pinchZoom0;
+    panY=newMid.y - (pinchMid0.y-pinchPan0.y)*nz/pinchZoom0;
+    // Also apply two-finger pan delta
+    panX+=newMid.x-pinchMid0.x;
+    panY+=newMid.y-pinchMid0.y;
+    zoom=nz;
+    updateZoomHud(); draw(); return;
+  }
+
+  // E1: ignore moves when pinch active or two fingers
+  if(e.touches&&e.touches.length>1) return;
+
   const {wx,wy,screenX,screenY}=evCoords(e);
   if(isPanning){ panX=panPX+(screenX-panSX); panY=panPY+(screenY-panSY); draw(); return; }
   if(!drawing&&!pathDrawing&&!circleP1){
@@ -1486,6 +1537,13 @@ function onPointerMove(e) {
 
 function onPointerUp(e) {
   e.preventDefault();
+
+  // E2: End pinch
+  if(pinchActive){
+    if(!e.touches||e.touches.length<2){ pinchActive=false; updateZoomHud(); }
+    return;
+  }
+
   if(isPanning){ isPanning=false; canvas.classList.remove('panning-active'); return; }
   if(state.mode==='path') return;
   const {wx,wy}=evCoords(e);
@@ -2069,7 +2127,19 @@ function toggleOverlay(teamId){
   if(!overlayState[teamId]) overlayState[teamId]={visible:false,filters:{zone:true,fight:true,rotation:true,pin:true}};
   overlayState[teamId].visible=!overlayState[teamId].visible;
   if(overlayState[teamId].visible&&sb&&(!shapesCache[teamId]||shapesCache[teamId].length===0)) loadTeamShapes(teamId);
-  renderTeamList(); draw();
+  // E4: log the visibility change
+  const team=teams.find(t=>t.id===teamId);
+  const visState=overlayState[teamId].visible?'visible':'hidden';
+  if(team){
+    annotations.push({
+      time_seconds:state.time,
+      title:`${team.name} overlay → ${visState}`,
+      body:'',
+      _ephemeral:true,
+      id:'local_vis_'+Date.now()
+    });
+  }
+  renderTeamList(); draw(); renderAnnotationLog({scrollToTop:true});
 }
 function toggleOverlayFilter(teamId,tag){
   if(!overlayState[teamId]) return;
@@ -2162,7 +2232,8 @@ function onTimeSlider() {
   document.getElementById('track-fill').style.width=pct+'%';
   document.getElementById('track-thumb').style.left=pct+'%';
   draw();
-  renderAnnotationLog();
+  renderAnnotationLog({scrubSync:true});
+  updateSelfButtonState();
 }
 
 // Override the input listener to also update visual track
@@ -2173,7 +2244,8 @@ document.getElementById('temporal-slider').addEventListener('input', function(){
   document.getElementById('track-fill').style.width=pct+'%';
   document.getElementById('track-thumb').style.left=pct+'%';
   draw();
-  renderAnnotationLog();
+  renderAnnotationLog({scrubSync:true});
+  updateSelfButtonState();
 });
 
 function renderTimelineTicks() {
@@ -2227,7 +2299,7 @@ function jumpToTime(t) {
   const pct=(state.time/slider.max)*100;
   document.getElementById('track-fill').style.width=pct+'%';
   document.getElementById('track-thumb').style.left=pct+'%';
-  draw(); renderAnnotationLog();
+  draw(); renderAnnotationLog({scrubSync:true});
 }
 
 // ══════════════════════════════════════════════════════
@@ -2316,12 +2388,36 @@ function markSelfWipe() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   const selfTeam=teams.find(t=>t.match_id===state.matchId&&t.is_self);
   if(!selfTeam){ toast('NO SELF TEAM FOUND','warn'); return; }
+  // E8: Toggle off if clicking at the same wipe time
+  if(selfTeam.time_of_wipe!==null&&selfTeam.time_of_wipe!==undefined){
+    if(selfTeam.time_of_wipe===state.time){
+      selfTeam.time_of_wipe=null;
+      if(sb&&!String(selfTeam.id).startsWith('local_')){
+        sb.from('teams').update({time_of_wipe:null}).eq('id',selfTeam.id);
+      }
+      toast('☠ Self wipe removed','ok');
+      renderTimelineTicks(); renderAnnotationLog(); updateSelfButtonState(); return;
+    }
+  }
   selfTeam.time_of_wipe=state.time;
   if(sb&&!String(selfTeam.id).startsWith('local_')){
     sb.from('teams').update({time_of_wipe:state.time}).eq('id',selfTeam.id);
   }
   toast(`☠ SELF WIPE recorded at ${fmtTime(state.time)}`,'ok');
-  renderTimelineTicks();
+  renderTimelineTicks(); renderAnnotationLog({scrollToTop:true}); updateSelfButtonState();
+}
+
+// E8: Disable/re-enable self-action buttons based on wipe state
+function updateSelfButtonState() {
+  const selfTeam=state.matchId ? teams.find(t=>t.match_id===state.matchId&&t.is_self) : null;
+  const wiped=selfTeam?.time_of_wipe!=null && state.time>=selfTeam.time_of_wipe;
+  // Find self-action buttons by their onclick attributes
+  document.querySelectorAll('[onclick*="markSelfElim"],[onclick*="markSelfLoss"]').forEach(btn=>{
+    btn.disabled=wiped;
+    btn.style.opacity=wiped?'0.35':'';
+    btn.style.cursor=wiped?'not-allowed':'';
+    btn.title=wiped?'Self team already wiped':'';
+  });
 }
 
 function markSelfLoss() {
@@ -2346,7 +2442,9 @@ function markEnemyWipe() {
   document.getElementById('ewm-time').textContent=fmtTime(state.time);
   const sel=document.getElementById('ewm-team-select');
   sel.innerHTML='<option value="">— select team —</option>';
-  teams.filter(t=>t.match_id===state.matchId&&!t.is_self).forEach(t=>{ sel.add(new Option(t.name,t.id)); });
+  // E7: Only show teams not already wiped (time_of_wipe is null/undefined)
+  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe).forEach(t=>{ sel.add(new Option(t.name,t.id)); });
+  if(sel.options.length===1){ toast('ALL ENEMY TEAMS ALREADY WIPED','warn'); return; }
   document.getElementById('enemy-wipe-modal').classList.add('show');
 }
 
@@ -2462,10 +2560,12 @@ async function saveAnnotation() {
       if(!error) ann.id=data.id;
     } catch(e){ console.error(e); }
   }
-  closeAnnotationModal(); renderAnnotationLog(); toast('Note saved','ok');
+  closeAnnotationModal(); renderAnnotationLog({scrollToTop:true}); toast('Note saved','ok');
 }
 
-function renderAnnotationLog() {
+function renderAnnotationLog(opts) {
+  // opts.scrollToTop — force scroll to top (new entry added)
+  // opts.scrubSync   — scroll so last lit entry is visible at top
   const container=document.getElementById('annotation-log');
   container.innerHTML='';
 
@@ -2498,15 +2598,22 @@ function renderAnnotationLog() {
     }
   });
 
+  // Sort oldest→newest, then reverse so newest is at TOP, T=0 at BOTTOM
   events.sort((a,b)=>a.time-b.time);
 
   if(!events.length){
     const empty=document.createElement('div'); empty.style.cssText='font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:20px;'; empty.textContent='NO EVENTS YET'; container.appendChild(empty); return;
   }
 
-  events.forEach(ev=>{
+  // Reverse: newest at top
+  const reversed=[...events].reverse();
+
+  let lastLitEl=null;
+  reversed.forEach(ev=>{
     const entry=document.createElement('div');
-    entry.className='annotation-entry'+(ev.time>state.time?' future':'');
+    const isLit = ev.time<=state.time;
+    entry.className='annotation-entry'+(isLit?'':' future');
+    entry.dataset.evTime=ev.time;
     entry.onclick=()=>jumpToTime(ev.time);
     const iconEl=document.createElement('div'); iconEl.className='annotation-icon '+ev.iconClass; iconEl.textContent=ev.icon;
     const bodyEl=document.createElement('div'); bodyEl.className='annotation-body';
@@ -2516,7 +2623,18 @@ function renderAnnotationLog() {
     if(ev.body){ const subEl=document.createElement('div'); subEl.className='annotation-sub'; subEl.textContent=ev.body; bodyEl.appendChild(subEl); }
     entry.appendChild(iconEl); entry.appendChild(bodyEl);
     container.appendChild(entry);
+    // Track the last lit entry (lowest time ≤ current, which appears last in reversed list = bottom of lit block)
+    if(isLit) lastLitEl=entry;
   });
+
+  // Auto-scroll: new entry added → scroll to top
+  if(opts?.scrollToTop){
+    container.scrollTop=0;
+  }
+  // Scrub sync: scroll so boundary entry (last lit) is visible near top
+  else if(opts?.scrubSync && lastLitEl){
+    lastLitEl.scrollIntoView({block:'nearest'});
+  }
 }
 
 // ══════════════════════════════════════════════════════
