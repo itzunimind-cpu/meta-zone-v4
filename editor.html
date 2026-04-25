@@ -1178,6 +1178,7 @@ async function loadAllData() {
     tournaments=t.data; days=d.data; matches=m.data; teams=tm.data;
     setSyncState('saved');
     refreshDropdowns();
+    await applyUrlParams();
   } catch(e) {
     console.error(e); setSyncState('error');
     setStatus('DB ERROR: '+e.message, false);
@@ -1911,6 +1912,69 @@ async function deleteSelected(type) {
 // ══════════════════════════════════════════════════════
 // DROPDOWNS
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// URL PARAM AUTO-SELECTION (dashboard → editor deep link)
+// ══════════════════════════════════════════════════════
+async function applyUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const pTournamentId = params.get('tournamentId');
+  const pDayId       = params.get('dayId');
+  const pMatchId     = params.get('matchId');
+
+  // No params — nothing to do
+  if (!pMatchId && !pDayId && !pTournamentId) return;
+
+  // Validate the IDs exist in loaded data
+  const tournament = pTournamentId && tournaments.find(t => t.id === pTournamentId);
+  const day        = pDayId        && days.find(d => d.id === pDayId);
+  const match      = pMatchId      && matches.find(m => m.id === pMatchId);
+
+  if (!tournament || !day || !match) {
+    setStatus('LINK ERROR: match not found', false);
+    return;
+  }
+
+  // Set state
+  state.tournamentId = tournament.id;
+  state.dayId        = day.id;
+  state.matchId      = match.id;
+
+  // Load map
+  if (match.map_key) {
+    state.mapKey = match.map_key;
+    const mapSel = document.getElementById('sel-map');
+    if (mapSel) mapSel.value = match.map_key;
+    loadMapKey(match.map_key);
+  }
+
+  // Set active team to SELF or first team
+  const matchTeams = teams.filter(t => t.match_id === match.id);
+  const selfTeam   = matchTeams.find(t => t.is_self) || matchTeams[0];
+  state.activeTeamId = selfTeam?.id || null;
+
+  // Update timeline duration
+  if (match.duration_seconds) {
+    const slider = document.getElementById('temporal-slider');
+    if (slider) slider.max = Math.max(match.duration_seconds + 60, 2100);
+  }
+
+  // Load shapes & annotations
+  if (sb && state.matchId) await loadShapesForMatch(state.matchId);
+  annotations = [];
+  await loadAnnotations(state.matchId);
+
+  // Refresh all UI
+  refreshDropdowns();
+  renderTeamList();
+  renderAnnotationLog();
+  renderTimelineTicks();
+  updateRightPanel();
+  draw();
+
+  setStatus('MATCH LOADED FROM LINK', true);
+  setTimeout(() => setStatus('READY', true), 2000);
+}
+
 function refreshDropdowns() {
   const tSel=document.getElementById('sel-tournament');
   const dSel=document.getElementById('sel-day');
