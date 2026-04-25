@@ -20,7 +20,6 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
-
 .grid-bg{background-image:linear-gradient(to right,rgba(34,211,238,.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(34,211,238,.04) 1px,transparent 1px);background-size:40px 40px;}
 
 /* AUTH */
@@ -62,44 +61,51 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 #app-body{flex:1;display:flex;overflow:hidden;}
 
 /* SIDEBAR */
-#sidebar{width:260px;min-width:260px;background:rgba(11,18,33,.6);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.sidebar-top{padding:14px 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+#sidebar{width:272px;min-width:272px;background:rgba(11,18,33,.6);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-top{padding:12px 12px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .sb-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;}
-.sb-add-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;transition:all .15s;font-size:16px;}
+.sb-actions{display:flex;align-items:center;gap:6px;}
+.sb-add-btn{height:28px;display:flex;align-items:center;gap:5px;padding:0 10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;white-space:nowrap;}
 .sb-add-btn:hover{border-color:var(--accent);color:var(--accent);}
+.sb-add-btn iconify-icon{font-size:12px;}
 .sidebar-scroll{flex:1;overflow-y:auto;padding:8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .sidebar-scroll::-webkit-scrollbar{width:3px;}
 .sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
 /* Tree items */
-.t-block{margin-bottom:6px;}
-.t-row{width:100%;display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;text-align:left;}
+.t-block{margin-bottom:4px;}
+.t-row{width:100%;display:flex;align-items:center;gap:7px;padding:9px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;text-align:left;}
 .t-row:hover{border-color:rgba(34,211,238,.3);}
-.t-row.sel{border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.04);}
+.t-row.sel{border-color:rgba(34,211,238,.5);background:rgba(34,211,238,.05);}
 .t-icon{color:var(--accent);font-size:14px;flex-shrink:0;}
-.t-name{font-size:13px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.t-name{font-size:13px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.t-meta{font-family:var(--font-mono);font-size:9px;color:var(--muted2);flex-shrink:0;}
+.t-settings{width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--muted2);cursor:pointer;border-radius:4px;transition:all .15s;flex-shrink:0;font-size:13px;}
+.t-settings:hover{color:var(--accent);background:rgba(34,211,238,.08);}
 .t-chev{color:var(--muted);font-size:13px;transition:transform .2s;flex-shrink:0;}
 .t-chev.open{transform:rotate(180deg);}
 
-.days-tree{margin-top:2px;margin-left:14px;border-left:1px solid var(--border);padding-left:10px;display:flex;flex-direction:column;gap:1px;}
+.days-tree{margin-top:2px;margin-left:12px;border-left:1px solid var(--border);padding-left:10px;display:flex;flex-direction:column;gap:1px;padding-bottom:4px;}
 .d-row{width:100%;display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:6px;border:1px solid transparent;cursor:pointer;transition:all .15s;text-align:left;}
 .d-row:hover{background:rgba(255,255,255,.04);}
-.d-row.sel{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.2);}
-.d-name{font-size:13px;color:var(--muted);transition:color .15s;}
-.d-row:hover .d-name{color:var(--text);}
+.d-row.sel{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.25);}
+.d-name{font-size:12px;font-weight:500;color:var(--muted);transition:color .15s;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.d-row:hover .d-name,.d-row.sel .d-name{color:var(--text);}
 .d-row.sel .d-name{color:var(--accent);}
-.d-badge{font-family:var(--font-mono);font-size:9px;background:rgba(34,211,238,.15);color:var(--accent);padding:2px 6px;border-radius:4px;}
+.d-badge{font-family:var(--font-mono);font-size:9px;background:rgba(34,211,238,.12);color:var(--accent);padding:2px 6px;border-radius:4px;flex-shrink:0;margin-left:6px;}
 .d-add-btn{width:100%;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;border:none;background:none;color:var(--muted2);font-family:var(--font-mono);font-size:10px;letter-spacing:1px;cursor:pointer;transition:color .15s;text-align:left;}
 .d-add-btn:hover{color:var(--accent);}
 
 /* Add forms */
-.add-form{padding:6px 0;display:none;}
+.add-form{padding:4px 0;display:none;}
 .add-form.show{display:block;}
 .add-row{display:flex;gap:6px;}
 .add-input{flex:1;padding:7px 10px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);font-size:12px;outline:none;transition:border-color .2s;}
 .add-input:focus{border-color:var(--accent);}
-.add-ok{padding:7px 12px;background:var(--accent);color:#020617;border:none;border-radius:6px;font-family:var(--font-mono);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.add-ok{padding:7px 12px;background:var(--accent);color:#020617;border:none;border-radius:6px;font-family:var(--font-mono);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s;}
 .add-ok:hover{background:#67e8f9;}
+.add-cancel{padding:7px 10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-family:var(--font-mono);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.add-cancel:hover{border-color:var(--red);color:var(--red);}
 
 .sidebar-foot{padding:12px 14px;border-top:1px solid var(--border);background:rgba(2,6,23,.5);}
 .rep-labels{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
@@ -113,11 +119,28 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 #main-content::-webkit-scrollbar{width:4px;}
 #main-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 .main-inner{padding:28px 32px 40px;}
+
+/* Main header */
 .main-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;gap:12px;flex-wrap:wrap;}
 .main-eyebrow{font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:5px;}
 .main-title{font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-1px;}
 .main-sub{font-size:13px;color:var(--muted);margin-top:3px;}
 .main-actions{display:flex;align-items:center;gap:8px;}
+
+/* Day tabs strip */
+.day-tabs-strip{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.day-tab{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:20px;font-family:var(--font-mono);font-size:11px;color:var(--muted);cursor:pointer;background:var(--bg-card);transition:all .15s;}
+.day-tab:hover{border-color:rgba(34,211,238,.3);color:var(--text);}
+.day-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(34,211,238,.07);}
+.day-tab-count{font-size:9px;background:rgba(34,211,238,.15);color:var(--accent);padding:2px 5px;border-radius:10px;}
+.day-tab.active .day-tab-count{background:rgba(34,211,238,.25);}
+.add-day-tab{display:flex;align-items:center;gap:5px;padding:7px 12px;border:1px dashed var(--muted2);border-radius:20px;font-family:var(--font-mono);font-size:11px;color:var(--muted2);cursor:pointer;background:none;transition:all .15s;}
+.add-day-tab:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Add day inline form in main area */
+.add-day-form-inline{display:none;align-items:center;gap:8px;padding:10px 14px;border:1px dashed var(--accent);border-radius:8px;background:rgba(34,211,238,.04);margin-bottom:20px;}
+.add-day-form-inline.show{display:flex;}
+.add-day-form-inline .add-input{max-width:240px;}
 
 .btn-primary{display:flex;align-items:center;gap:7px;padding:10px 18px;background:var(--accent);color:#020617;border:none;border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;box-shadow:0 0 20px rgba(34,211,238,.2);}
 .btn-primary:hover{background:#67e8f9;}
@@ -157,11 +180,18 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 .card-open iconify-icon{transition:transform .15s;}
 .card-open:hover iconify-icon{transform:translateX(3px);}
 
-/* Empty state */
+/* Empty states */
 .empty-state{text-align:center;padding:80px 32px;}
 .es-icon{font-size:48px;color:var(--muted);margin-bottom:16px;}
 .es-title{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--muted);margin-bottom:8px;}
 .es-sub{font-family:var(--font-mono);font-size:11px;color:var(--muted2);letter-spacing:1px;}
+.es-action{display:inline-flex;align-items:center;gap:7px;margin-top:20px;padding:10px 20px;background:var(--accent);color:#020617;border:none;border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;box-shadow:0 0 20px rgba(34,211,238,.2);}
+.es-action:hover{background:#67e8f9;}
+
+/* No tournament state */
+.no-t-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:48px;}
+.no-t-icon{width:64px;height:64px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+.no-t-icon iconify-icon{font-size:32px;color:var(--accent);}
 
 /* RIGHT PANEL */
 #right-panel{width:300px;min-width:300px;border-left:1px solid var(--border);background:rgba(11,18,33,.65);display:flex;flex-direction:column;overflow:hidden;}
@@ -193,7 +223,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 .rp-open-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:14px 16px 16px;padding:13px;background:var(--accent);color:#020617;border:none;border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:all .15s;box-shadow:0 0 20px rgba(34,211,238,.18);}
 .rp-open-btn:hover{background:#67e8f9;}
 
-.no-sel{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px;text-align:center;gap:12px;height:100%;}
+.no-sel{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;gap:12px;height:100%;}
 
 /* MODAL */
 #new-match-modal{position:fixed;inset:0;background:rgba(2,6,23,.85);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;z-index:200;}
@@ -279,13 +309,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
   <!-- SIDEBAR -->
   <aside id="sidebar">
     <div class="sidebar-top">
-      <span class="sb-label">Directories</span>
-      <button class="sb-add-btn" onclick="toggleAddTournament()" title="New Tournament"><iconify-icon icon="lucide:plus"></iconify-icon></button>
-    </div>
-    <div id="add-t-form" class="add-form" style="padding:8px 10px 2px;">
-      <div class="add-row">
-        <input class="add-input" id="in-tournament" type="text" placeholder="Tournament name…" onkeydown="if(event.key==='Enter')addTournament()">
-        <button class="add-ok" onclick="addTournament()">ADD</button>
+      <span class="sb-label">Tournaments</span>
+      <div class="sb-actions">
+        <button class="sb-add-btn" onclick="goCreateTournament()" title="New Tournament">
+          <iconify-icon icon="lucide:plus"></iconify-icon> NEW
+        </button>
       </div>
     </div>
     <div class="sidebar-scroll" id="tournament-tree">
@@ -307,21 +335,33 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
     <div class="main-inner">
       <div class="main-head">
         <div>
-          <div class="main-eyebrow" id="main-eyebrow">SELECT A DAY TO BEGIN</div>
+          <div class="main-eyebrow" id="main-eyebrow">SELECT A TOURNAMENT</div>
           <div class="main-title" id="main-title">Intelligence Dashboard</div>
-          <div class="main-sub" id="main-sub">Choose a tournament day from the sidebar to view match data</div>
+          <div class="main-sub" id="main-sub">Choose a tournament from the sidebar to begin analysis</div>
         </div>
         <div class="main-actions" id="main-actions" style="display:none;">
-          <button class="btn-secondary" onclick="openNewMatchModal()">
+          <button class="btn-secondary" id="btn-new-match" onclick="openNewMatchModal()">
             <iconify-icon icon="lucide:plus"></iconify-icon> NEW MATCH
           </button>
         </div>
       </div>
+
+      <!-- Day tabs row — shown when a tournament is selected -->
+      <div id="day-tabs-wrap" style="display:none;">
+        <div class="day-tabs-strip" id="day-tabs"></div>
+        <!-- Inline add-day form -->
+        <div class="add-day-form-inline" id="add-day-form-inline">
+          <input class="add-input" id="in-day-inline" type="text" placeholder="Day name… e.g. Day 1" onkeydown="if(event.key==='Enter')addDayInline();if(event.key==='Escape')hideAddDayForm();">
+          <button class="add-ok" onclick="addDayInline()">ADD</button>
+          <button class="add-cancel" onclick="hideAddDayForm()">✕</button>
+        </div>
+      </div>
+
       <div id="match-grid">
         <div class="empty-state">
           <div class="es-icon"><iconify-icon icon="lucide:layers"></iconify-icon></div>
-          <div class="es-title">No Day Selected</div>
-          <div class="es-sub">Select a tournament day from the sidebar</div>
+          <div class="es-title">No Tournament Selected</div>
+          <div class="es-sub">Select a tournament from the sidebar to view matches</div>
         </div>
       </div>
     </div>
@@ -359,7 +399,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
   <div class="modal-box">
     <div>
       <div class="modal-title">New Match</div>
-      <div class="modal-sub">ADD MATCH TO SELECTED DAY</div>
+      <div class="modal-sub" id="modal-day-sub">ADD MATCH TO SELECTED DAY</div>
     </div>
     <div class="modal-field">
       <div class="modal-label">Match Name</div>
@@ -385,7 +425,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 <div id="toast-container"></div>
 
 <script>
-// ── SUPABASE (copy creds from editor.html) ──
+// ── SUPABASE ──
 const SUPA_URL='https://qsiqgtdgpcyishtayqhy.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzaXFndGRncGN5aXNodGF5cWh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTMxNTYsImV4cCI6MjA5MjU2OTE1Nn0.tqr45OipzZEr7kMZBIQaSK7mXyUIdWAS_9y1kFabhYI';
 const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
@@ -405,7 +445,7 @@ async function sendMagicLink(){
   else{msg.textContent='✓ Check your inbox for the link';msg.className='auth-msg ok';}
 }
 async function signOut(){await sb.auth.signOut();}
-function resetLocalState(){tournaments=[];activeTournamentId=null;activeDayId=null;activeMatchId=null;matches=[];selectedMatch=null;renderTree();renderGrid();renderRP();}
+function resetLocalState(){tournaments=[];activeTournamentId=null;activeDayId=null;activeMatchId=null;matches=[];selectedMatch=null;renderTree();renderDayTabs();renderGrid();renderRP();}
 
 // ── INIT ──
 (async()=>{
@@ -424,17 +464,35 @@ async function loadAll(){
   try{
     const[{data:tData,error:tErr},{data:dData,error:dErr},{data:mData,error:mErr}]=await Promise.all([
       sb.from('tournaments').select('id,name,created_at').order('created_at'),
-      sb.from('days').select('id,name,tournament_id,order_index').order('order_index'),
+      sb.from('days').select('id,name,tournament_id,order_index,created_at').order('order_index'),
       sb.from('matches').select('id,day_id').order('created_at')
     ]);
     if(tErr)throw tErr;if(dErr)throw dErr;if(mErr)throw mErr;
     const mCount={};
     mData.forEach(m=>{mCount[m.day_id]=(mCount[m.day_id]||0)+1;});
-    tournaments=tData.map(t=>({...t,open:true,days:dData.filter(d=>d.tournament_id===t.id).map(d=>({...d,match_count:mCount[d.id]||0}))}));
+    tournaments=tData.map(t=>({...t,open:false,days:dData.filter(d=>d.tournament_id===t.id).map(d=>({...d,match_count:mCount[d.id]||0}))}));
     document.getElementById('footer-latency').textContent=(Date.now()-t0)+'ms';
     document.getElementById('rep-fill').style.width='100%';
     setStatus('READY');
     renderTree();
+
+    // [D1] Auto-select latest tournament + latest day
+    if(tournaments.length>0 && !activeTournamentId){
+      const latestT=[...tournaments].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+      if(latestT){
+        activeTournamentId=latestT.id;
+        latestT.open=true;
+        const sortedDays=[...latestT.days].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+        const latestD=sortedDays[0];
+        if(latestD){
+          await selectDay(latestT.id,latestD.id);
+        } else {
+          // Tournament exists but no days yet — show the tournament without a day
+          selectTournamentOnly(latestT.id);
+        }
+        renderTree();
+      }
+    }
   }catch(e){console.error(e);toast('Load failed: '+e.message,'err');setStatus('ERROR');}
 }
 
@@ -457,22 +515,36 @@ async function loadMatchesForDay(dayId){
   }catch(e){console.error(e);toast('Failed to load matches: '+e.message,'err');setStatus('ERROR');}
 }
 
-// ── SIDEBAR ──
+// ── SIDEBAR TREE ──
 function renderTree(){
   const el=document.getElementById('tournament-tree');
   if(!tournaments.length){
-    el.innerHTML=`<div style="padding:24px 12px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;">NO TOURNAMENTS</div><div style="font-size:11px;color:var(--muted2);margin-top:8px;">Use + to create one</div></div>`;
+    el.innerHTML=`
+      <div style="padding:28px 12px;text-align:center;">
+        <iconify-icon icon="lucide:trophy" style="font-size:28px;color:var(--muted2);margin-bottom:10px;display:block;"></iconify-icon>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;">NO TOURNAMENTS</div>
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:16px;">Create your first tournament to get started</div>
+        <button onclick="goCreateTournament()" style="padding:7px 14px;background:var(--accent);color:#020617;border:none;border-radius:6px;font-family:var(--font-mono);font-size:10px;font-weight:700;cursor:pointer;letter-spacing:1px;">+ CREATE ONE</button>
+      </div>`;
     return;
   }
-  el.innerHTML=tournaments.map(t=>`
+  el.innerHTML=tournaments.map(t=>{
+    const totalDays=t.days.length;
+    const totalMatches=t.days.reduce((s,d)=>s+(d.match_count||0),0);
+    return`
     <div class="t-block">
-      <button class="t-row${activeTournamentId===t.id?' sel':''}" onclick="toggleT('${t.id}')">
+      <button class="t-row${activeTournamentId===t.id?' sel':''}" onclick="selectTournamentOnly('${t.id}')">
         <iconify-icon icon="lucide:trophy" class="t-icon"></iconify-icon>
-        <span class="t-name">${esc(t.name)}</span>
+        <span class="t-name" title="${esc(t.name)}">${esc(t.name)}</span>
+        <span class="t-meta">${totalDays}d·${totalMatches}m</span>
+        <button class="t-settings" onclick="event.stopPropagation();goTournamentEditor('${t.id}')" title="Tournament settings">
+          <iconify-icon icon="lucide:settings-2"></iconify-icon>
+        </button>
         <iconify-icon icon="lucide:chevron-down" class="t-chev${t.open?' open':''}"></iconify-icon>
       </button>
       ${t.open?`
         <div class="days-tree">
+          ${t.days.length===0?`<div style="padding:8px 10px;font-family:var(--font-mono);font-size:10px;color:var(--muted2);">No days yet</div>`:''}
           ${t.days.map(d=>`
             <button class="d-row${activeDayId===d.id?' sel':''}" onclick="selectDay('${t.id}','${d.id}')">
               <span class="d-name">${esc(d.name)}</span>
@@ -481,7 +553,7 @@ function renderTree(){
           `).join('')}
           <div class="add-form" id="add-d-${t.id}">
             <div class="add-row">
-              <input class="add-input" id="in-day-${t.id}" type="text" placeholder="Day name…" onkeydown="if(event.key==='Enter')addDay('${t.id}')">
+              <input class="add-input" id="in-day-${t.id}" type="text" placeholder="Day name…" onkeydown="if(event.key==='Enter')addDay('${t.id}');if(event.key==='Escape')toggleAddDay('${t.id}')">
               <button class="add-ok" onclick="addDay('${t.id}')">ADD</button>
             </div>
           </div>
@@ -490,31 +562,163 @@ function renderTree(){
           </button>
         </div>
       `:''}
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
-function toggleT(id){const t=tournaments.find(x=>x.id===id);if(t){t.open=!t.open;renderTree();}}
-function toggleAddTournament(){const f=document.getElementById('add-t-form');f.classList.toggle('show');if(f.classList.contains('show'))document.getElementById('in-tournament').focus();}
-function toggleAddDay(tid){const f=document.getElementById('add-d-'+tid);if(f){f.classList.toggle('show');if(f.classList.contains('show'))document.getElementById('in-day-'+tid).focus();}}
+// ── DAY TABS (main area) ──
+function renderDayTabs(){
+  const t=tournaments.find(x=>x.id===activeTournamentId);
+  const wrap=document.getElementById('day-tabs-wrap');
+  const tabsEl=document.getElementById('day-tabs');
+  if(!t){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  tabsEl.innerHTML=t.days.map(d=>`
+    <button class="day-tab${activeDayId===d.id?' active':''}" onclick="selectDay('${t.id}','${d.id}')">
+      ${esc(d.name)}
+      ${d.match_count?`<span class="day-tab-count">${d.match_count}</span>`:''}
+    </button>
+  `).join('')+`<button class="add-day-tab" onclick="showAddDayForm()"><iconify-icon icon="lucide:plus" style="font-size:11px;"></iconify-icon> ADD DAY</button>`;
+}
+
+function showAddDayForm(){
+  const f=document.getElementById('add-day-form-inline');
+  f.classList.add('show');
+  document.getElementById('in-day-inline').focus();
+}
+function hideAddDayForm(){
+  const f=document.getElementById('add-day-form-inline');
+  f.classList.remove('show');
+  document.getElementById('in-day-inline').value='';
+}
+
+async function addDayInline(){
+  if(!activeTournamentId){toast('No tournament selected','err');return;}
+  const inp=document.getElementById('in-day-inline');
+  const name=inp.value.trim();
+  if(!name)return;
+  const t=tournaments.find(x=>x.id===activeTournamentId);
+  const orderIndex=t?t.days.length:0;
+  setStatus('SAVING…');
+  const{data,error}=await sb.from('days').insert({name,tournament_id:activeTournamentId,user_id:currentUser.id,order_index:orderIndex}).select().single();
+  if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
+  if(t)t.days.push({...data,match_count:0});
+  hideAddDayForm();
+  setStatus('SAVED');toast('Day added','ok');
+  renderTree();
+  // Auto-select the newly added day
+  await selectDay(activeTournamentId,data.id);
+  setTimeout(()=>setStatus('READY'),1500);
+}
+
+function toggleT(id){
+  const t=tournaments.find(x=>x.id===id);
+  if(t){t.open=!t.open;renderTree();}
+}
+
+function toggleAddDay(tid){
+  const f=document.getElementById('add-d-'+tid);
+  if(f){f.classList.toggle('show');if(f.classList.contains('show'))document.getElementById('in-day-'+tid).focus();}
+}
+
+// ── TOURNAMENT ACTIONS ──
+function goCreateTournament(){
+  window.location.href='tournament-create.html';
+}
+function goTournamentEditor(tid){
+  window.location.href='tournament-editor.html?tournamentId='+tid;
+}
+
+// ── SELECT TOURNAMENT (no day yet) ──
+function selectTournamentOnly(id){
+  const t=tournaments.find(x=>x.id===id);
+  if(!t)return;
+  // Toggle open/close if clicking same tournament, or open if new
+  if(activeTournamentId===id){
+    t.open=!t.open;
+  } else {
+    // Close all others, open this one
+    tournaments.forEach(x=>{x.open=x.id===id;});
+    activeTournamentId=id;
+    activeDayId=null;
+    activeMatchId=null;
+    selectedMatch=null;
+    matches=[];
+    // Update header
+    document.getElementById('main-eyebrow').textContent='TOURNAMENT';
+    document.getElementById('main-title').textContent=t.name;
+    const totalM=t.days.reduce((s,d)=>s+(d.match_count||0),0);
+    document.getElementById('main-sub').textContent=`${t.days.length} day${t.days.length!==1?'s':''} · ${totalM} match${totalM!==1?'es':''}`;
+    document.getElementById('main-actions').style.display='none';
+    document.getElementById('footer-match-count').textContent='0';
+    renderDayTabs();
+    renderGrid();
+    renderRP();
+  }
+  renderTree();
+}
 
 async function selectDay(tournamentId,dayId){
-  activeTournamentId=tournamentId;activeDayId=dayId;activeMatchId=null;selectedMatch=null;
   const t=tournaments.find(x=>x.id===tournamentId);
-  const d=t?.days.find(x=>x.id===dayId);
-  document.getElementById('main-eyebrow').textContent=t?.name||'';
-  document.getElementById('main-title').textContent=d?.name||'Day';
-  document.getElementById('main-sub').textContent=`Tactical intelligence reconstruction for ${d?.match_count||0} match dataset${d?.match_count!==1?'s':''}`;
+  if(!t)return;
+  // Ensure tournament is open in sidebar
+  tournaments.forEach(x=>{x.open=x.id===tournamentId;});
+  activeTournamentId=tournamentId;
+  activeDayId=dayId;
+  activeMatchId=null;
+  selectedMatch=null;
+  const d=t.days.find(x=>x.id===dayId);
+  document.getElementById('main-eyebrow').textContent=esc(t.name);
+  document.getElementById('main-title').textContent=esc(d?.name||'Day');
+  document.getElementById('main-sub').textContent=`Tactical intelligence reconstruction for ${d?.match_count||0} match dataset${(d?.match_count||0)!==1?'s':''}`;
   document.getElementById('main-actions').style.display='flex';
-  renderTree();renderRP();
+  document.getElementById('modal-day-sub').textContent=`ADD MATCH TO ${(d?.name||'DAY').toUpperCase()}`;
+  renderTree();
+  renderDayTabs();
+  renderRP();
   await loadMatchesForDay(dayId);
+}
+
+// ── SIDEBAR addDay (from sidebar form) ──
+async function addDay(tid){
+  const inp=document.getElementById('in-day-'+tid);
+  const name=inp.value.trim();if(!name)return;
+  const t=tournaments.find(x=>x.id===tid);
+  const orderIndex=t?t.days.length:0;
+  setStatus('SAVING…');
+  const{data,error}=await sb.from('days').insert({name,tournament_id:tid,user_id:currentUser.id,order_index:orderIndex}).select().single();
+  if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
+  if(t)t.days.push({...data,match_count:0});
+  inp.value='';
+  document.getElementById('add-d-'+tid).classList.remove('show');
+  setStatus('SAVED');toast('Day added','ok');
+  renderTree();
+  renderDayTabs();
+  await selectDay(tid,data.id);
+  setTimeout(()=>setStatus('READY'),1500);
 }
 
 // ── GRID ──
 function renderGrid(){
   const el=document.getElementById('match-grid');
-  if(!activeDayId){el.innerHTML=`<div class="empty-state"><div class="es-icon"><iconify-icon icon="lucide:layers"></iconify-icon></div><div class="es-title">No Day Selected</div><div class="es-sub">Select a tournament day from the sidebar</div></div>`;return;}
-  if(!matches.length){el.innerHTML=`<div class="empty-state"><div class="es-icon"><iconify-icon icon="lucide:map"></iconify-icon></div><div class="es-title">No Matches Yet</div><div class="es-sub">Create your first match with NEW MATCH</div></div>`;return;}
+  const t=tournaments.find(x=>x.id===activeTournamentId);
+
+  if(!activeTournamentId){
+    el.innerHTML=`<div class="empty-state"><div class="es-icon"><iconify-icon icon="lucide:layers"></iconify-icon></div><div class="es-title">No Tournament Selected</div><div class="es-sub">Select a tournament from the sidebar</div></div>`;
+    return;
+  }
+  if(!activeDayId){
+    if(!t||t.days.length===0){
+      el.innerHTML=`<div class="empty-state"><div class="es-icon"><iconify-icon icon="lucide:calendar-plus"></iconify-icon></div><div class="es-title">No Days Yet</div><div class="es-sub">Add a day to this tournament to start tracking matches</div><button class="es-action" onclick="showAddDayForm()"><iconify-icon icon="lucide:plus"></iconify-icon> ADD FIRST DAY</button></div>`;
+    } else {
+      el.innerHTML=`<div class="empty-state"><div class="es-icon"><iconify-icon icon="lucide:calendar"></iconify-icon></div><div class="es-title">Select a Day</div><div class="es-sub">Pick a day from the tabs above to view its matches</div></div>`;
+    }
+    return;
+  }
+  if(!matches.length){
+    el.innerHTML=`<div class="empty-state"><div class="es-icon"><iconify-icon icon="lucide:map"></iconify-icon></div><div class="es-title">No Matches Yet</div><div class="es-sub">Create the first match for this day</div><button class="es-action" onclick="openNewMatchModal()"><iconify-icon icon="lucide:plus"></iconify-icon> NEW MATCH</button></div>`;
+    return;
+  }
   el.innerHTML=`<div class="match-grid">${matches.map((m,i)=>matchCard(m,i)).join('')}</div>`;
 }
 
@@ -591,35 +795,6 @@ function renderRP(){
   `;
 }
 
-// ── ADD TOURNAMENT ──
-async function addTournament(){
-  const inp=document.getElementById('in-tournament');
-  const name=inp.value.trim();if(!name)return;
-  setStatus('SAVING…');
-  const{data,error}=await sb.from('tournaments').insert({name,user_id:currentUser.id}).select().single();
-  if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
-  tournaments.push({...data,open:true,days:[]});
-  inp.value='';
-  document.getElementById('add-t-form').classList.remove('show');
-  setStatus('SAVED');toast('Tournament created','ok');renderTree();
-  setTimeout(()=>setStatus('READY'),1500);
-}
-
-// ── ADD DAY ──
-async function addDay(tid){
-  const inp=document.getElementById('in-day-'+tid);
-  const name=inp.value.trim();if(!name)return;
-  const t=tournaments.find(x=>x.id===tid);
-  const orderIndex=t?t.days.length:0;
-  setStatus('SAVING…');
-  const{data,error}=await sb.from('days').insert({name,tournament_id:tid,user_id:currentUser.id,order_index:orderIndex}).select().single();
-  if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
-  if(t)t.days.push({...data,match_count:0});
-  inp.value='';
-  setStatus('SAVED');toast('Day added','ok');renderTree();
-  setTimeout(()=>setStatus('READY'),1500);
-}
-
 // ── NEW MATCH MODAL ──
 function openNewMatchModal(){
   if(!activeDayId){toast('Select a day first','err');return;}
@@ -642,10 +817,10 @@ async function confirmNewMatch(){
   await sb.from('teams').insert({name:'SELF',match_id:data.id,user_id:currentUser.id,is_self:true,color:'#22d3ee',slot_index:0,kills:0});
   matches.push({...data,teams:[]});
   const t=tournaments.find(x=>x.id===activeTournamentId);
-  if(t){const d=t.days.find(x=>x.id===activeDayId);if(d)d.match_count++;}
+  if(t){const d=t.days.find(x=>x.id===activeDayId);if(d){d.match_count++;}}
   document.getElementById('main-sub').textContent=`Tactical intelligence reconstruction for ${matches.length} match dataset${matches.length!==1?'s':''}`;
   setStatus('SAVED');toast('Match created — open in editor to annotate','ok');
-  renderTree();renderGrid();
+  renderTree();renderDayTabs();renderGrid();
   setTimeout(()=>setStatus('READY'),1500);
 }
 
