@@ -585,24 +585,30 @@ async function signOut() {
 // ══════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════
+let _booted = false;
+
 (async () => {
   const t0 = Date.now();
+
+  // Always hide loading spinner immediately — auth screen or app will take over
+  document.getElementById('loading-screen').classList.add('hidden');
 
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
     document.getElementById('auth-screen').classList.add('hidden');
-    await boot();
+    if (!_booted) { _booted = true; await boot(); }
   }
 
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       currentUser = session.user;
       document.getElementById('auth-screen').classList.add('hidden');
-      await boot();
+      if (!_booted) { _booted = true; await boot(); }
     }
     if (event === 'SIGNED_OUT') {
       currentUser = null;
+      _booted = false;
       document.getElementById('auth-screen').classList.remove('hidden');
     }
   });
@@ -615,7 +621,6 @@ async function boot() {
   const params = new URLSearchParams(window.location.search);
   tournamentId = params.get('tournamentId');
 
-  document.getElementById('loading-screen').classList.add('hidden');
   document.getElementById('app').style.display = 'flex';
   document.getElementById('app').style.flexDirection = 'column';
 
