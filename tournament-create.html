@@ -411,6 +411,7 @@ let groups = []; // [{id, name, teams:[{name}]}]
 let groupIdCounter = 0;
 let suggestionTimer = null;
 let activeSuggestionGroup = null; // for groups mode: group id
+let knownTeams = []; // preloaded team names for instant autocomplete
 
 // ──────────────────────────────────────────────
 // AUTH
@@ -459,7 +460,20 @@ function resetLocalState() {
   });
 })();
 
-function init() {
+async function init() {
+  // Preload all known team names for instant autocomplete (no per-keystroke DB calls)
+  try {
+    const { data, error } = await sb
+      .from('tournament_teams')
+      .select('team_name')
+      .eq('user_id', currentUser.id);
+    if (!error && data) {
+      const seen = new Set();
+      knownTeams = data
+        .map(r => r.team_name)
+        .filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    }
+  } catch(e) { /* non-fatal — autocomplete just won't have history */ }
   renderStep(1);
 }
 
@@ -578,15 +592,16 @@ function addPoolTeam() {
     toast('Team already in list.', 'err'); return;
   }
   poolTeams.push({ name });
+  // Add to knownTeams if not already there (available in suggestions for groups too)
+  if (!knownTeams.some(n => n.toLowerCase() === name.toLowerCase())) knownTeams.push(name);
   inp.value = '';
   closeSuggestions('pool-suggestions');
   renderPoolChips();
 }
 function onPoolInput() {
   const val = document.getElementById('pool-team-input').value.trim();
-  clearTimeout(suggestionTimer);
   if (val.length < 2) { closeSuggestions('pool-suggestions'); return; }
-  suggestionTimer = setTimeout(() => fetchSuggestions(val, 'pool-suggestions', null), 200);
+  fetchSuggestions(val, 'pool-suggestions', null);
 }
 function onPoolKeydown(e) {
   if (e.key === 'Enter') { addPoolTeam(); }
@@ -678,10 +693,9 @@ function renderGroupChips(gid) {
 }
 function onGroupInput(gid) {
   const val = document.getElementById('group-input-' + gid).value.trim();
-  clearTimeout(suggestionTimer);
   if (val.length < 2) { closeSuggestions('group-suggestions-' + gid); return; }
   activeSuggestionGroup = gid;
-  suggestionTimer = setTimeout(() => fetchSuggestions(val, 'group-suggestions-' + gid, gid), 200);
+  fetchSuggestions(val, 'group-suggestions-' + gid, gid);
 }
 function onGroupKeydown(e, gid) {
   if (e.key === 'Enter') { addGroupTeam(gid); }
@@ -689,28 +703,19 @@ function onGroupKeydown(e, gid) {
 }
 
 // AUTOCOMPLETE — shared
-async function fetchSuggestions(query, dropId, gid) {
-  const { data, error } = await sb
-    .from('tournament_teams')
-    .select('team_name')
-    .ilike('team_name', `%${query}%`)
-    .eq('user_id', currentUser.id)
-    .limit(8);
-  if (error) return;
+function fetchSuggestions(query, dropId, gid) {
+  // Filter preloaded knownTeams client-side — instant, no DB call
+  const q = query.toLowerCase();
+  const matches = knownTeams
+    .filter(n => n.toLowerCase().includes(q))
+    .slice(0, 8);
   const drop = document.getElementById(dropId);
   if (!drop) return;
-  // Deduplicate suggestions
-  const seen = new Set();
-  const items = (data || []).filter(r => {
-    const k = r.team_name.toLowerCase();
-    if (seen.has(k)) return false;
-    seen.add(k); return true;
-  });
-  if (items.length === 0) {
+  if (matches.length === 0) {
     drop.innerHTML = `<div class="suggestion-empty">No matches — press ENTER to add "${esc(query)}"</div>`;
   } else {
-    drop.innerHTML = items.map(r =>
-      `<div class="suggestion-item" onmousedown="pickSuggestion('${dropId}', '${esc(r.team_name)}', ${JSON.stringify(gid)})">${esc(r.team_name)}</div>`
+    drop.innerHTML = matches.map(n =>
+      `<div class="suggestion-item" onmousedown="pickSuggestion('${dropId}', '${esc(n)}', ${JSON.stringify(gid)})">${esc(n)}</div>`
     ).join('');
   }
   drop.classList.add('open');
