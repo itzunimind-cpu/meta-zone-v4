@@ -245,6 +245,19 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 .modal-ok{flex:2;padding:11px;background:var(--accent);color:#020617;border:none;border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .15s;}
 .modal-ok:hover{background:#67e8f9;}
 
+/* GROUP PICKER MODAL */
+#group-picker-modal{position:fixed;inset:0;background:rgba(2,6,23,.85);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;z-index:210;}
+#group-picker-modal.hidden{display:none;}
+.gp-box{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:30px;width:440px;display:flex;flex-direction:column;gap:16px;max-height:80vh;}
+.gp-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;}
+.gp-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;}
+.gp-item:hover{border-color:rgba(34,211,238,.4);}
+.gp-item.sel{border-color:var(--accent);background:rgba(34,211,238,.06);}
+.gp-check{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:11px;}
+.gp-item.sel .gp-check{background:var(--accent);border-color:var(--accent);color:#020617;}
+.gp-name{font-size:13px;font-weight:600;flex:1;}
+.gp-count{font-family:var(--font-mono);font-size:10px;color:var(--muted);}
+
 /* TOAST */
 #toast-container{position:fixed;bottom:44px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:300;}
 .toast{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-family:var(--font-mono);font-size:11px;color:var(--text);display:flex;align-items:center;gap:8px;min-width:200px;animation:slideIn .2s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);}
@@ -417,6 +430,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
   </div>
 </div>
 
+<!-- GROUP PICKER MODAL -->
+<div id="group-picker-modal" class="hidden">
+  <div class="gp-box">
+    <div>
+      <div class="modal-title">Select Groups</div>
+      <div class="modal-sub">Choose which groups to include in this match</div>
+    </div>
+    <div class="gp-list" id="gp-list"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeGroupPicker()">CANCEL</button>
+      <button class="modal-ok" onclick="confirmGroupPicker()">ADD TEAMS</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast-container"></div>
 
@@ -428,6 +456,7 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 
 // ── STATE ──
 let currentUser=null,tournaments=[],activeTournamentId=null,activeDayId=null,activeMatchId=null,matches=[],selectedMatch=null,nmMap='erangel';
+const TEAM_COLORS=['#22d3ee','#4ade80','#f87171','#fb923c','#facc15','#a78bfa','#f472b6','#34d399','#f97316','#38bdf8','#86efac','#ef4444','#c084fc','#fbbf24','#a8a29e','#94a3b8','#ec4899','#60a5fa'];
 const MAP_IMGS={erangel:'Erangel.png',miramar:'Miramar.png',sanhok:'sanhok.png',rondo:'rondo.png'};
 
 // ── AUTH ──
@@ -824,16 +853,97 @@ function closeNewMatchModal(){document.getElementById('new-match-modal').classLi
 function selectModalMap(k){nmMap=k;document.querySelectorAll('.map-opt').forEach(el=>el.classList.toggle('sel',el.dataset.map===k));}
 
 async function confirmNewMatch(){
-  // [I1] Auto-name: count existing matches for this day
+  // [I1] Auto-name
   const name='Match '+String(matches.length+1).padStart(2,'0');
   closeNewMatchModal();setStatus('SAVING…');
   const{data,error}=await sb.from('matches').insert({name,day_id:activeDayId,map_key:nmMap,user_id:currentUser.id}).select().single();
   if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
-  // create SELF team
-  await sb.from('teams').insert({name:'SELF',match_id:data.id,user_id:currentUser.id,is_self:true,color:'#22d3ee',slot_index:0,kills:0});
+  newMatchId=data.id;
+  // [M1] Check tournament team_mode to decide how to populate teams
+  const t=tournaments.find(x=>x.id===activeTournamentId);
+  const{data:tData}=await sb.from('tournaments').select('team_mode').eq('id',activeTournamentId).single();
+  const mode=tData?.team_mode||'pool';
+  if(mode==='pool'){
+    await populateTeamsFromPool(data.id);
+    setStatus('SAVED');
+    window.location.href=`editor.html?matchId=${data.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+  } else {
+    // GROUPS — show picker modal
+    setStatus('READY');
+    await openGroupPicker(data.id);
+  }
+}
+
+// ── M1: Pool auto-populate ──
+async function populateTeamsFromPool(matchId){
+  // Always insert SELF first at slot 0
+  await sb.from('teams').insert({name:'SELF',match_id:matchId,user_id:currentUser.id,is_self:true,color:TEAM_COLORS[0],slot_index:0,kills:0});
+  // Fetch tournament roster
+  const{data:roster}=await sb.from('tournament_teams').select('team_name').eq('tournament_id',activeTournamentId).order('created_at');
+  if(!roster||roster.length===0)return;
+  const rows=roster.map((r,i)=>({name:r.team_name,match_id:matchId,user_id:currentUser.id,color:TEAM_COLORS[(i+1)%TEAM_COLORS.length],slot_index:i+1,kills:0}));
+  await sb.from('teams').insert(rows);
+}
+
+// ── M1: Groups picker ──
+let newMatchId=null;
+let selectedGroupIds=new Set();
+
+async function openGroupPicker(matchId){
+  newMatchId=matchId;
+  selectedGroupIds=new Set();
+  const{data:grps}=await sb.from('groups').select('id,name').eq('tournament_id',activeTournamentId).order('created_at');
+  if(!grps||grps.length===0){
+    // No groups defined — just insert SELF and redirect
+    await sb.from('teams').insert({name:'SELF',match_id:matchId,user_id:currentUser.id,is_self:true,color:TEAM_COLORS[0],slot_index:0,kills:0});
+    window.location.href=`editor.html?matchId=${matchId}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+    return;
+  }
+  // Fetch member counts per group
+  const{data:members}=await sb.from('group_members').select('group_id').in('group_id',grps.map(g=>g.id));
+  const counts={};
+  (members||[]).forEach(m=>{counts[m.group_id]=(counts[m.group_id]||0)+1;});
+  const list=document.getElementById('gp-list');
+  list.innerHTML=grps.map(g=>`
+    <div class="gp-item" id="gp-${g.id}" onclick="toggleGroupPick('${g.id}')">
+      <div class="gp-check" id="gp-chk-${g.id}"></div>
+      <span class="gp-name">${esc(g.name||'Group')}</span>
+      <span class="gp-count">${counts[g.id]||0} teams</span>
+    </div>`).join('');
+  document.getElementById('group-picker-modal').classList.remove('hidden');
+}
+
+function toggleGroupPick(gid){
+  if(selectedGroupIds.has(gid)){
+    selectedGroupIds.delete(gid);
+    document.getElementById('gp-'+gid).classList.remove('sel');
+    document.getElementById('gp-chk-'+gid).textContent='';
+  } else {
+    selectedGroupIds.add(gid);
+    document.getElementById('gp-'+gid).classList.add('sel');
+    document.getElementById('gp-chk-'+gid).textContent='✓';
+  }
+}
+
+function closeGroupPicker(){
+  document.getElementById('group-picker-modal').classList.add('hidden');
+  selectedGroupIds=new Set();
+}
+
+async function confirmGroupPicker(){
+  if(selectedGroupIds.size===0){toast('Select at least one group','err');return;}
+  document.getElementById('group-picker-modal').classList.add('hidden');
+  setStatus('SAVING…');
+  // Always insert SELF at slot 0
+  await sb.from('teams').insert({name:'SELF',match_id:newMatchId,user_id:currentUser.id,is_self:true,color:TEAM_COLORS[0],slot_index:0,kills:0});
+  // Fetch members for selected groups
+  const{data:members}=await sb.from('group_members').select('team_name').in('group_id',[...selectedGroupIds]);
+  if(members&&members.length>0){
+    const rows=members.map((m,i)=>({name:m.team_name,match_id:newMatchId,user_id:currentUser.id,color:TEAM_COLORS[(i+1)%TEAM_COLORS.length],slot_index:i+1,kills:0}));
+    await sb.from('teams').insert(rows);
+  }
   setStatus('SAVED');
-  // [I3] Redirect to editor with full URL params
-  window.location.href=`editor.html?matchId=${data.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+  window.location.href=`editor.html?matchId=${newMatchId}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
 }
 
 // ── UTILS ──
@@ -851,6 +961,7 @@ function toast(msg,type=''){
 
 // close modal on backdrop
 document.getElementById('new-match-modal').addEventListener('click',function(e){if(e.target===this)closeNewMatchModal();});
+document.getElementById('group-picker-modal').addEventListener('click',function(e){if(e.target===this)closeGroupPicker();});
 </script>
 </body>
 </html>
