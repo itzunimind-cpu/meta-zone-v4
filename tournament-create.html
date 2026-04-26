@@ -831,7 +831,7 @@ async function confirmCreate() {
   }
 
   toast('Tournament created! Redirecting…', 'ok');
-  setTimeout(() => { window.location.href = 'index.html'; }, 900);
+  setTimeout(() => { window.location.href = 'index.html?tournamentId=' + tid + '&autostart=1'; }, 900);
 }
 function handleCreateError(btn, msg) {
   btn.disabled = false; btn.classList.remove('loading'); btn.textContent = 'DEPLOY TOURNAMENT';
