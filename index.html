@@ -594,10 +594,10 @@ function renderTree(){
       <button class="t-row${activeTournamentId===t.id?' sel':''}" onclick="selectTournamentOnly('${t.id}')">
         <iconify-icon icon="lucide:trophy" class="t-icon"></iconify-icon>
         <span class="t-name" title="${esc(t.name)}">${esc(t.name)}</span>
+        <span class="t-meta">${totalDays}d·${totalMatches}m</span>
         <button class="t-settings" onclick="event.stopPropagation();goTournamentEditor('${t.id}')" title="Tournament settings">
           <iconify-icon icon="lucide:settings-2"></iconify-icon>
         </button>
-        <span class="t-meta">${totalDays}d·${totalMatches}m</span>
         <iconify-icon icon="lucide:chevron-down" class="t-chev${t.open?' open':''}"></iconify-icon>
       </button>
       ${t.open?`
