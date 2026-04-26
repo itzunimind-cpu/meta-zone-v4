@@ -351,7 +351,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
         <div class="day-tabs-strip" id="day-tabs"></div>
         <!-- Inline add-day form -->
         <div class="add-day-form-inline" id="add-day-form-inline">
-          <input class="add-input" id="in-day-inline" type="text" placeholder="Day name… e.g. Day 1" onkeydown="if(event.key==='Enter')addDayInline();if(event.key==='Escape')hideAddDayForm();">
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px;" id="add-day-preview">Day 01 will be created</span>
           <button class="add-ok" onclick="addDayInline()">ADD</button>
           <button class="add-cancel" onclick="hideAddDayForm()">✕</button>
         </div>
@@ -400,10 +400,6 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
     <div>
       <div class="modal-title">New Match</div>
       <div class="modal-sub" id="modal-day-sub">ADD MATCH TO SELECTED DAY</div>
-    </div>
-    <div class="modal-field">
-      <div class="modal-label">Match Name</div>
-      <input class="modal-input" id="nm-name" type="text" placeholder="Match 01, Game 3…" onkeydown="if(event.key==='Enter')confirmNewMatch()">
     </div>
     <div class="modal-field">
       <div class="modal-label">Map</div>
@@ -476,21 +472,54 @@ async function loadAll(){
     setStatus('READY');
     renderTree();
 
-    // [D1] Auto-select latest tournament + latest day
-    if(tournaments.length>0 && !activeTournamentId){
-      const latestT=[...tournaments].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
-      if(latestT){
-        activeTournamentId=latestT.id;
-        latestT.open=true;
-        const sortedDays=[...latestT.days].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-        const latestD=sortedDays[0];
-        if(latestD){
-          await selectDay(latestT.id,latestD.id);
-        } else {
-          // Tournament exists but no days yet — show the tournament without a day
-          selectTournamentOnly(latestT.id);
-        }
+    // [I2] Check for autostart URL params
+    const urlP=new URLSearchParams(location.search);
+    const autoTid=urlP.get('tournamentId');
+    const autoStart=urlP.get('autostart')==='1';
+
+    if(autoTid && autoStart){
+      // Autostart: select tournament, silently create Day 01, open match modal
+      const autoT=tournaments.find(x=>x.id===autoTid);
+      if(autoT){
+        tournaments.forEach(x=>{x.open=x.id===autoTid;});
+        activeTournamentId=autoTid;
         renderTree();
+        // Create Day 01 silently
+        const orderIndex=autoT.days.length;
+        const dayName='Day '+String(orderIndex+1).padStart(2,'0');
+        const{data:dData,error:dErr}=await sb.from('days').insert({name:dayName,tournament_id:autoTid,user_id:currentUser.id,order_index:orderIndex}).select().single();
+        if(dErr){toast('Failed to create day: '+dErr.message,'err');}
+        else{
+          autoT.days.push({...dData,match_count:0});
+          activeDayId=dData.id;
+          matches=[];
+          document.getElementById('main-eyebrow').textContent=esc(autoT.name);
+          document.getElementById('main-title').textContent=esc(dData.name);
+          document.getElementById('main-sub').textContent='Ready to create first match';
+          document.getElementById('main-actions').style.display='flex';
+          document.getElementById('modal-day-sub').textContent='ADD MATCH TO '+dData.name.toUpperCase();
+          renderTree();renderDayTabs();renderGrid();
+          // Clean URL then open modal
+          history.replaceState({},'',location.pathname);
+          openNewMatchModal();
+        }
+      }
+    } else {
+      // [D1] Auto-select latest tournament + latest day
+      if(tournaments.length>0 && !activeTournamentId){
+        const latestT=[...tournaments].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+        if(latestT){
+          activeTournamentId=latestT.id;
+          latestT.open=true;
+          const sortedDays=[...latestT.days].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+          const latestD=sortedDays[0];
+          if(latestD){
+            await selectDay(latestT.id,latestD.id);
+          } else {
+            selectTournamentOnly(latestT.id);
+          }
+          renderTree();
+        }
       }
     }
   }catch(e){console.error(e);toast('Load failed: '+e.message,'err');setStatus('ERROR');}
@@ -536,10 +565,10 @@ function renderTree(){
       <button class="t-row${activeTournamentId===t.id?' sel':''}" onclick="selectTournamentOnly('${t.id}')">
         <iconify-icon icon="lucide:trophy" class="t-icon"></iconify-icon>
         <span class="t-name" title="${esc(t.name)}">${esc(t.name)}</span>
-        <span class="t-meta">${totalDays}d·${totalMatches}m</span>
         <button class="t-settings" onclick="event.stopPropagation();goTournamentEditor('${t.id}')" title="Tournament settings">
           <iconify-icon icon="lucide:settings-2"></iconify-icon>
         </button>
+        <span class="t-meta">${totalDays}d·${totalMatches}m</span>
         <iconify-icon icon="lucide:chevron-down" class="t-chev${t.open?' open':''}"></iconify-icon>
       </button>
       ${t.open?`
@@ -551,13 +580,7 @@ function renderTree(){
               ${d.match_count?`<span class="d-badge">${d.match_count}</span>`:''}
             </button>
           `).join('')}
-          <div class="add-form" id="add-d-${t.id}">
-            <div class="add-row">
-              <input class="add-input" id="in-day-${t.id}" type="text" placeholder="Day name…" onkeydown="if(event.key==='Enter')addDay('${t.id}');if(event.key==='Escape')toggleAddDay('${t.id}')">
-              <button class="add-ok" onclick="addDay('${t.id}')">ADD</button>
-            </div>
-          </div>
-          <button class="d-add-btn" onclick="toggleAddDay('${t.id}')">
+          <button class="d-add-btn" onclick="addDay('${t.id}')">
             <iconify-icon icon="lucide:plus" style="font-size:11px;"></iconify-icon> ADD DAY
           </button>
         </div>
@@ -582,23 +605,23 @@ function renderDayTabs(){
 }
 
 function showAddDayForm(){
+  const t=tournaments.find(x=>x.id===activeTournamentId);
+  const nextNum=(t?t.days.length:0)+1;
+  const preview=document.getElementById('add-day-preview');
+  if(preview)preview.textContent='"Day '+String(nextNum).padStart(2,'0')+'" will be created';
   const f=document.getElementById('add-day-form-inline');
   f.classList.add('show');
-  document.getElementById('in-day-inline').focus();
 }
 function hideAddDayForm(){
   const f=document.getElementById('add-day-form-inline');
   f.classList.remove('show');
-  document.getElementById('in-day-inline').value='';
 }
 
 async function addDayInline(){
   if(!activeTournamentId){toast('No tournament selected','err');return;}
-  const inp=document.getElementById('in-day-inline');
-  const name=inp.value.trim();
-  if(!name)return;
   const t=tournaments.find(x=>x.id===activeTournamentId);
   const orderIndex=t?t.days.length:0;
+  const name='Day '+String(orderIndex+1).padStart(2,'0');
   setStatus('SAVING…');
   const{data,error}=await sb.from('days').insert({name,tournament_id:activeTournamentId,user_id:currentUser.id,order_index:orderIndex}).select().single();
   if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
@@ -616,10 +639,7 @@ function toggleT(id){
   if(t){t.open=!t.open;renderTree();}
 }
 
-function toggleAddDay(tid){
-  const f=document.getElementById('add-d-'+tid);
-  if(f){f.classList.toggle('show');if(f.classList.contains('show'))document.getElementById('in-day-'+tid).focus();}
-}
+
 
 // ── TOURNAMENT ACTIONS ──
 function goCreateTournament(){
@@ -681,15 +701,13 @@ async function selectDay(tournamentId,dayId){
 
 // ── SIDEBAR addDay (from sidebar form) ──
 async function addDay(tid){
-  const inp=document.getElementById('in-day-'+tid);
-  const name=inp.value.trim();if(!name)return;
   const t=tournaments.find(x=>x.id===tid);
   const orderIndex=t?t.days.length:0;
+  const name='Day '+String(orderIndex+1).padStart(2,'0');
   setStatus('SAVING…');
   const{data,error}=await sb.from('days').insert({name,tournament_id:tid,user_id:currentUser.id,order_index:orderIndex}).select().single();
   if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
   if(t)t.days.push({...data,match_count:0});
-  inp.value='';
   document.getElementById('add-d-'+tid).classList.remove('show');
   setStatus('SAVED');toast('Day added','ok');
   renderTree();
@@ -798,30 +816,24 @@ function renderRP(){
 // ── NEW MATCH MODAL ──
 function openNewMatchModal(){
   if(!activeDayId){toast('Select a day first','err');return;}
-  document.getElementById('nm-name').value='Match '+String(matches.length+1).padStart(2,'0');
   nmMap='erangel';
   document.querySelectorAll('.map-opt').forEach(el=>el.classList.toggle('sel',el.dataset.map==='erangel'));
   document.getElementById('new-match-modal').classList.remove('hidden');
-  setTimeout(()=>{document.getElementById('nm-name').focus();document.getElementById('nm-name').select();},50);
 }
 function closeNewMatchModal(){document.getElementById('new-match-modal').classList.add('hidden');}
 function selectModalMap(k){nmMap=k;document.querySelectorAll('.map-opt').forEach(el=>el.classList.toggle('sel',el.dataset.map===k));}
 
 async function confirmNewMatch(){
-  const name=document.getElementById('nm-name').value.trim();
-  if(!name){toast('Enter a match name','err');return;}
+  // [I1] Auto-name: count existing matches for this day
+  const name='Match '+String(matches.length+1).padStart(2,'0');
   closeNewMatchModal();setStatus('SAVING…');
   const{data,error}=await sb.from('matches').insert({name,day_id:activeDayId,map_key:nmMap,user_id:currentUser.id}).select().single();
   if(error){toast('Failed: '+error.message,'err');setStatus('ERROR');return;}
   // create SELF team
   await sb.from('teams').insert({name:'SELF',match_id:data.id,user_id:currentUser.id,is_self:true,color:'#22d3ee',slot_index:0,kills:0});
-  matches.push({...data,teams:[]});
-  const t=tournaments.find(x=>x.id===activeTournamentId);
-  if(t){const d=t.days.find(x=>x.id===activeDayId);if(d){d.match_count++;}}
-  document.getElementById('main-sub').textContent=`Tactical intelligence reconstruction for ${matches.length} match dataset${matches.length!==1?'s':''}`;
-  setStatus('SAVED');toast('Match created — open in editor to annotate','ok');
-  renderTree();renderDayTabs();renderGrid();
-  setTimeout(()=>setStatus('READY'),1500);
+  setStatus('SAVED');
+  // [I3] Redirect to editor with full URL params
+  window.location.href=`editor.html?matchId=${data.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
 }
 
 // ── UTILS ──
