@@ -111,8 +111,26 @@
     .view-btn:first-child { border-radius: 3px 0 0 3px; }
     .view-btn:last-child { border-radius: 0 3px 3px 0; }
 
-    /* Filter chips */
-    .scope-chip {
+    /* Scope pills */
+    .scope-pill {
+      padding: 5px 12px;
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .scope-pill.active {
+      background: var(--accent);
+      color: #020617;
+    }
+    .scope-pill:hover:not(.active) { color: var(--text); }
       padding: 5px 14px;
       font-size: 9px;
       font-family: 'JetBrains Mono', monospace;
@@ -277,7 +295,7 @@
   <main style="flex:1;padding:32px;max-width:1400px;width:100%;margin:0 auto;" id="main-content">
 
     <!-- EMPTY STATE — no tournament -->
-    <div id="empty-state" class="hidden" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;text-align:center;">
+    <div id="empty-state" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;text-align:center;">
       <iconify-icon icon="lucide:bar-chart-2" style="font-size:48px;color:var(--muted);"></iconify-icon>
       <p class="font-display" style="font-size:20px;font-weight:700;color:var(--text);">No Tournament Selected</p>
       <p style="font-size:13px;color:var(--muted);max-width:320px;">Open a tournament from the Tournament Editor and click "View Analytics" to load data here.</p>
@@ -303,16 +321,22 @@
               <option value="self">YOUR TEAM (SELF)</option>
             </select>
           </div>
-          <!-- Scope filter -->
-          <div style="display:flex;gap:0;">
-            <button class="scope-chip active" id="scope-all" onclick="setScope('all')">All Matches</button>
-            <button class="scope-chip" id="scope-day" onclick="setScope('day')" style="margin-left:4px;">By Day</button>
-            <button class="scope-chip" id="scope-map" onclick="setScope('map')" style="margin-left:4px;">By Map</button>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <!-- Temporal Scope — inline day pills -->
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="font-mono" style="font-size:9px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;">Temporal Scope</span>
+            <div id="day-pill-strip" style="display:flex;align-items:center;gap:3px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;">
+              <button class="scope-pill active" id="scope-pill-all" onclick="setScopeDay('all')">ALL DAYS</button>
+            </div>
           </div>
-          <!-- Day/Map sub-filter (shown contextually) -->
-          <select id="scope-sub-filter" class="styled hidden" onchange="renderCharts()">
-            <option value="">— SELECT —</option>
-          </select>
+          <!-- Map Scope — inline map pills -->
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="font-mono" style="font-size:9px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;">Map Context</span>
+            <div id="map-pill-strip" style="display:flex;align-items:center;gap:3px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;">
+              <button class="scope-pill active" id="map-pill-all" onclick="setScopeMap('all')">ALL MAPS</button>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -560,8 +584,6 @@ let teamNames = [];      // [{team_name}]
 
 // View state
 let currentView = 'coach';  // 'coach' | 'analyst'
-let currentScope = 'all';   // 'all' | 'day' | 'map'
-let currentScopeValue = ''; // day_id or map_key
 let selectedTeamName = 'SELF'; // 'SELF' or a team name
 
 // ══════════════════════════════════════════════════════
@@ -626,7 +648,6 @@ async function boot() {
 
   if (!tournamentId) {
     document.getElementById('empty-state').style.display = 'flex';
-    document.getElementById('empty-state').classList.remove('hidden');
     return;
   }
 
@@ -638,7 +659,6 @@ async function loadAllData() {
   const { data: t } = await sb.from('tournaments').select('id,name').eq('id', tournamentId).single();
   if (!t) {
     document.getElementById('empty-state').style.display = 'flex';
-    document.getElementById('empty-state').classList.remove('hidden');
     return;
   }
   tournamentData = t;
@@ -699,52 +719,65 @@ function onTeamChange() {
 }
 
 // ══════════════════════════════════════════════════════
-// SCOPE FILTER
+// SCOPE FILTERS — Day pills + Map pills
 // ══════════════════════════════════════════════════════
-function setScope(scope) {
-  currentScope = scope;
-  ['all','day','map'].forEach(s => {
-    document.getElementById(`scope-${s}`).classList.toggle('active', s === scope);
+let currentScopeDay = 'all';   // 'all' | day_id
+let currentScopeMap = 'all';   // 'all' | map_key
+
+function buildScopeSubFilter() {
+  buildDayPills();
+  buildMapPills();
+}
+
+function buildDayPills() {
+  const strip = document.getElementById('day-pill-strip');
+  strip.innerHTML = '';
+  // ALL button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'scope-pill' + (currentScopeDay === 'all' ? ' active' : '');
+  allBtn.id = 'scope-pill-all';
+  allBtn.textContent = 'ALL DAYS';
+  allBtn.onclick = () => setScopeDay('all');
+  strip.appendChild(allBtn);
+  // One button per day
+  allDays.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'scope-pill' + (currentScopeDay === d.id ? ' active' : '');
+    btn.textContent = d.name.toUpperCase();
+    btn.onclick = () => setScopeDay(d.id);
+    strip.appendChild(btn);
   });
-  buildScopeSubFilter();
+}
+
+function buildMapPills() {
+  const strip = document.getElementById('map-pill-strip');
+  strip.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'scope-pill' + (currentScopeMap === 'all' ? ' active' : '');
+  allBtn.textContent = 'ALL MAPS';
+  allBtn.onclick = () => setScopeMap('all');
+  strip.appendChild(allBtn);
+  const maps = [...new Set(allMatches.map(m => m.map_key).filter(Boolean))];
+  maps.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'scope-pill' + (currentScopeMap === m ? ' active' : '');
+    btn.textContent = m.toUpperCase();
+    btn.onclick = () => setScopeMap(m);
+    strip.appendChild(btn);
+  });
+}
+
+function setScopeDay(val) {
+  currentScopeDay = val;
+  buildDayPills();
   renderAll();
 }
 
-function buildScopeSubFilter() {
-  const sub = document.getElementById('scope-sub-filter');
-  sub.innerHTML = '<option value="">— SELECT —</option>';
-  currentScopeValue = '';
-
-  if (currentScope === 'day') {
-    sub.classList.remove('hidden');
-    allDays.forEach(d => {
-      const opt = document.createElement('option');
-      opt.value = d.id;
-      opt.textContent = d.name;
-      sub.appendChild(opt);
-    });
-  } else if (currentScope === 'map') {
-    sub.classList.remove('hidden');
-    const maps = [...new Set(allMatches.map(m => m.map_key).filter(Boolean))];
-    maps.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m;
-      opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
-      sub.appendChild(opt);
-    });
-  } else {
-    sub.classList.add('hidden');
-    currentScopeValue = '';
-  }
+function setScopeMap(val) {
+  currentScopeMap = val;
+  buildMapPills();
+  renderAll();
 }
-
-// Called when sub-filter changes
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('scope-sub-filter').addEventListener('change', function() {
-    currentScopeValue = this.value;
-    renderAll();
-  });
-});
 
 // ══════════════════════════════════════════════════════
 // VIEW TOGGLE
@@ -773,13 +806,13 @@ function setView(view) {
 // DATA HELPERS
 // ══════════════════════════════════════════════════════
 
-// Returns filtered matches based on current scope
 function getFilteredMatches() {
   let matches = [...allMatches];
-  if (currentScope === 'day' && currentScopeValue) {
-    matches = matches.filter(m => m.day_id === currentScopeValue);
-  } else if (currentScope === 'map' && currentScopeValue) {
-    matches = matches.filter(m => m.map_key === currentScopeValue);
+  if (currentScopeDay !== 'all') {
+    matches = matches.filter(m => m.day_id === currentScopeDay);
+  }
+  if (currentScopeMap !== 'all') {
+    matches = matches.filter(m => m.map_key === currentScopeMap);
   }
   return matches;
 }
