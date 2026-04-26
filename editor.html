@@ -819,9 +819,10 @@ canvas.path-mode{ cursor:cell; }
         <span class="ted-lbl">EDITING</span>
       </div>
       <div class="team-list" id="team-list"></div>
-      <div class="add-team-row">
-        <input class="mz-input" type="text" id="in-team" placeholder="Team name...">
+      <div class="add-team-row" style="position:relative;">
+        <input class="mz-input" type="text" id="in-team" placeholder="Team name..." autocomplete="off">
         <button class="btn-add" onclick="addTeam()">+</button>
+        <div id="team-suggestions" style="display:none;position:absolute;top:100%;left:0;right:32px;background:var(--bg-panel);border:1px solid var(--border);border-radius:0 0 6px 6px;z-index:200;max-height:140px;overflow-y:auto;margin-top:1px;"></div>
       </div>
     </div>
 
@@ -1098,6 +1099,7 @@ let shapesCache  = {};   // teamId → shape[]
 let overlayState = {};   // teamId → { visible, filters:{} }
 let annotations  = [];   // local annotation array
 let isAnnotationMode = true;
+let knownTeams = [];  // [FIX] autocomplete: preloaded from tournament_teams
 
 let state = {
   tournamentId: null,
@@ -1185,8 +1187,19 @@ async function signOut() { if (sb) await sb.auth.signOut(); }
 function resetLocalState() {
   tournaments=[]; days=[]; matches=[]; teams=[];
   shapesCache={}; overlayState={}; annotations=[];
+  knownTeams=[];
   state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
   refreshDropdowns(); renderTeamList(); updateRightPanel();
+}
+
+// [FIX] Autocomplete: preload team names from tournament_teams for current tournament
+async function preloadKnownTeams(tournamentId) {
+  knownTeams = [];
+  if (!sb || !tournamentId || !currentUser) return;
+  try {
+    const { data } = await sb.from('tournament_teams').select('team_name').eq('tournament_id', tournamentId).order('created_at');
+    if (data) knownTeams = data.map(r => r.team_name);
+  } catch(e) { /* silent */ }
 }
 
 // ══════════════════════════════════════════════════════
@@ -2007,7 +2020,7 @@ async function addTeam() {
   if(!state.matchId){ toast('SELECT MATCH FIRST','warn'); return; }
   const input=document.getElementById('in-team');
   const name=input.value.trim(); if(!name) return;
-  input.value='';
+  input.value=''; closeTeamSuggestions();
   const existingCount=teams.filter(t=>t.match_id===state.matchId).length;
   if(existingCount>=25){ toast('MAX 25 TEAMS','warn'); return; }
   const color=TEAM_COLORS[existingCount%TEAM_COLORS.length];
@@ -2162,6 +2175,8 @@ async function _activateMatch(match, statusMsg) {
   if (sb && state.matchId) await loadShapesForMatch(state.matchId);
   annotations = [];
   await loadAnnotations(state.matchId);
+  // [FIX] Preload known teams for autocomplete
+  if (state.tournamentId) await preloadKnownTeams(state.tournamentId);
 
   // Refresh all UI
   refreshDropdowns();
@@ -2193,6 +2208,9 @@ document.getElementById('sel-tournament').onchange=async function(){
   if(state.tournamentId&&sb){
     const {data,error}=await sb.from('days').select('*').eq('tournament_id',state.tournamentId).order('order_index');
     if(!error){ days=days.filter(d=>d.tournament_id!==state.tournamentId); days.push(...data); }
+    await preloadKnownTeams(state.tournamentId);
+  } else {
+    knownTeams=[];
   }
   refreshDropdowns(); renderTeamList(); draw(); updateRightPanel(); annotations=[]; renderAnnotationLog();
 };
@@ -2226,7 +2244,40 @@ document.getElementById('sel-match').onchange=async function(){
 
 document.getElementById('in-day').onkeydown=e=>{ if(e.key==='Enter') addDay(); };
 document.getElementById('in-match').onkeydown     =e=>{ if(e.key==='Enter') addMatch(); };
-document.getElementById('in-team').onkeydown      =e=>{ if(e.key==='Enter') addTeam(); };
+document.getElementById('in-team').onkeydown      =e=>{
+  if(e.key==='Enter'){ closeTeamSuggestions(); addTeam(); }
+  if(e.key==='Escape') closeTeamSuggestions();
+};
+
+// [FIX] Add-team autocomplete
+document.getElementById('in-team').oninput=function(){
+  const q=this.value.trim().toLowerCase();
+  if(!q||!knownTeams.length){ closeTeamSuggestions(); return; }
+  const already=new Set(teams.filter(t=>t.match_id===state.matchId).map(t=>t.name.toLowerCase()));
+  const matches_=knownTeams.filter(n=>n.toLowerCase().includes(q)&&!already.has(n.toLowerCase()));
+  if(!matches_.length){ closeTeamSuggestions(); return; }
+  const box=document.getElementById('team-suggestions');
+  box.innerHTML='';
+  matches_.slice(0,8).forEach(name=>{
+    const item=document.createElement('div');
+    item.textContent=name;
+    item.style.cssText='padding:6px 10px;font-size:12px;font-family:var(--font-body);cursor:pointer;color:var(--text);transition:background .1s;';
+    item.onmouseenter=()=>item.style.background='var(--bg-card)';
+    item.onmouseleave=()=>item.style.background='';
+    item.onmousedown=e=>{ e.preventDefault(); pickTeamSuggestion(name); };
+    box.appendChild(item);
+  });
+  box.style.display='block';
+};
+document.getElementById('in-team').onblur=()=>{ setTimeout(closeTeamSuggestions, 150); };
+function pickTeamSuggestion(name){
+  document.getElementById('in-team').value=name;
+  closeTeamSuggestions();
+}
+function closeTeamSuggestions(){
+  const box=document.getElementById('team-suggestions');
+  if(box){ box.style.display='none'; box.innerHTML=''; }
+}
 
 // ══════════════════════════════════════════════════════
 // TEAM LIST UI
