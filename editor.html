@@ -750,10 +750,6 @@ canvas.path-mode{ cursor:cell; }
         <select class="mz-select" id="sel-tournament"></select>
         <button class="btn-del" onclick="deleteSelected('tournament')" title="Delete">✕</button>
       </div>
-      <div class="add-row">
-        <input class="mz-input" type="text" id="in-tournament" placeholder="New tournament...">
-        <button class="btn-add" onclick="addTournament()">+</button>
-      </div>
     </div>
 
     <!-- DAY -->
@@ -1824,22 +1820,6 @@ document.getElementById('pp-label').onkeydown=e=>{
 // ══════════════════════════════════════════════════════
 // DB MANAGEMENT
 // ══════════════════════════════════════════════════════
-async function addTournament() {
-  const input=document.getElementById('in-tournament');
-  const name=input.value.trim(); if(!name) return;
-  input.value='';
-  if(sb&&currentUser){
-    setSyncState('syncing');
-    const {data,error}=await sb.from('tournaments').insert({name,user_id:currentUser.id}).select().single();
-    if(error){ toast('ERROR: '+error.message,'err'); return; }
-    tournaments.push(data); state.tournamentId=data.id; setSyncState('saved');
-  } else {
-    const fake={id:'local_'+Date.now(),name}; tournaments.push(fake); state.tournamentId=fake.id;
-  }
-  state.dayId=null; state.matchId=null; state.activeTeamId=null;
-  refreshDropdowns(); updateRightPanel();
-}
-
 async function addDay() {
   const input=document.getElementById('in-day');
   const name=input.value.trim();
@@ -1996,13 +1976,26 @@ async function deleteSelected(type) {
 async function applyUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const pTournamentId = params.get('tournamentId');
-  const pDayId       = params.get('dayId');
-  const pMatchId     = params.get('matchId');
+  const pDayId        = params.get('dayId');
+  const pMatchId      = params.get('matchId');
 
-  // No params — nothing to do
-  if (!pMatchId && !pDayId && !pTournamentId) return;
+  // [E11] No params — auto-load user's most recent match
+  if (!pMatchId && !pDayId && !pTournamentId) {
+    if (!matches.length) return; // no matches at all
+    // Sort all matches by created_at desc, pick latest
+    const sorted = [...matches].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    const latestMatch = sorted[0];
+    const latestDay   = days.find(d => d.id === latestMatch.day_id);
+    const latestT     = latestDay && tournaments.find(t => t.id === latestDay.tournament_id);
+    if (!latestMatch || !latestDay || !latestT) return;
+    state.tournamentId = latestT.id;
+    state.dayId        = latestDay.id;
+    state.matchId      = latestMatch.id;
+    await _activateMatch(latestMatch, 'LATEST MATCH AUTO-LOADED');
+    return;
+  }
 
-  // Validate the IDs exist in loaded data
+  // Deep-link: validate the IDs exist in loaded data
   const tournament = pTournamentId && tournaments.find(t => t.id === pTournamentId);
   const day        = pDayId        && days.find(d => d.id === pDayId);
   const match      = pMatchId      && matches.find(m => m.id === pMatchId);
@@ -2012,11 +2005,14 @@ async function applyUrlParams() {
     return;
   }
 
-  // Set state
   state.tournamentId = tournament.id;
   state.dayId        = day.id;
   state.matchId      = match.id;
+  await _activateMatch(match, 'MATCH LOADED FROM LINK');
+}
 
+// Shared match activation logic used by both deep-link and auto-load
+async function _activateMatch(match, statusMsg) {
   // Load map
   if (match.map_key) {
     state.mapKey = match.map_key;
@@ -2049,7 +2045,7 @@ async function applyUrlParams() {
   updateRightPanel();
   draw();
 
-  setStatus('MATCH LOADED FROM LINK', true);
+  setStatus(statusMsg, true);
   setTimeout(() => setStatus('READY', true), 2000);
 }
 
@@ -2102,8 +2098,7 @@ document.getElementById('sel-match').onchange=async function(){
   renderTimelineTicks();
 };
 
-document.getElementById('in-tournament').onkeydown=e=>{ if(e.key==='Enter') addTournament(); };
-document.getElementById('in-day').onkeydown       =e=>{ if(e.key==='Enter') addDay(); };
+document.getElementById('in-day').onkeydown=e=>{ if(e.key==='Enter') addDay(); };
 document.getElementById('in-match').onkeydown     =e=>{ if(e.key==='Enter') addMatch(); };
 document.getElementById('in-team').onkeydown      =e=>{ if(e.key==='Enter') addTeam(); };
 
