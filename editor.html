@@ -688,6 +688,47 @@ canvas.path-mode{ cursor:cell; }
 }
 .btn-slm-cancel:hover{ border-color:var(--red);color:var(--red); }
 
+/* ══ SELF ELIM MODAL ══ */
+#self-elim-modal{
+  position:fixed;inset:0;background:rgba(2,6,23,.7);backdrop-filter:blur(4px);
+  z-index:400;display:none;align-items:center;justify-content:center;
+}
+#self-elim-modal.show{ display:flex; }
+.sem-box{
+  background:var(--bg-panel);border:1px solid var(--accent);border-radius:10px;
+  padding:20px;width:300px;display:flex;flex-direction:column;gap:12px;max-height:70vh;
+}
+.sem-title{ font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text); }
+.sem-sub{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em; }
+.sem-players{ display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:240px; }
+.sem-player{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+  cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;
+}
+.sem-player:hover{ border-color:var(--accent);color:var(--accent); }
+.sem-player.selected{ border-color:var(--accent);background:rgba(34,211,238,.08);color:var(--accent); }
+.sem-player-dot{ width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0; }
+.sem-empty{
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  text-align:center;padding:12px 0;line-height:1.6;
+}
+.sem-add-row{ display:flex;gap:6px; }
+.sem-add-row .mz-input{ flex:1;margin:0; }
+.sem-actions{ display:flex;gap:8px;margin-top:2px; }
+.btn-sem-cancel{
+  flex:1;padding:8px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;
+}
+.btn-sem-cancel:hover{ border-color:var(--red);color:var(--red); }
+.btn-sem-confirm{
+  flex:1;padding:8px;background:var(--accent);border:none;color:#020617;
+  border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:700;
+  cursor:pointer;transition:opacity .15s;
+}
+.btn-sem-confirm:hover{ opacity:.85; }
+.btn-sem-confirm:disabled{ opacity:.35;cursor:not-allowed; }
+
 /* Annotation add modal */
 #annotation-modal{
   position:fixed;inset:0;background:rgba(2,6,23,.7);backdrop-filter:blur(4px);
@@ -1063,6 +1104,23 @@ canvas.path-mode{ cursor:cell; }
   </div>
 </div>
 
+<!-- ══ SELF ELIM MODAL ████████████████████ -->
+<div id="self-elim-modal">
+  <div class="sem-box">
+    <div class="sem-title">⚡ Self Elim — <span id="sem-time" style="color:var(--accent);font-family:var(--font-mono)">00:00</span></div>
+    <div class="sem-sub">WHICH PLAYER SECURED THE KILL?</div>
+    <div class="sem-players" id="sem-player-select"></div>
+    <div class="sem-add-row">
+      <input class="mz-input" type="text" id="sem-add-input" placeholder="Add player name..." autocomplete="off" maxlength="30">
+      <button class="btn-add" onclick="semAddPlayer()">+</button>
+    </div>
+    <div class="sem-actions">
+      <button class="btn-sem-cancel" onclick="closeSelfElimModal()">CANCEL</button>
+      <button class="btn-sem-confirm" id="sem-confirm-btn" onclick="confirmSelfElim()" disabled>CONFIRM ELIM</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ ANNOTATION MODAL ████████████████████ -->
 <div id="annotation-modal">
   <div class="anm-box">
@@ -1098,6 +1156,7 @@ let tournaments=[], days=[], matches=[], teams=[];
 let shapesCache  = {};   // teamId → shape[]
 let overlayState = {};   // teamId → { visible, filters:{} }
 let annotations  = [];   // local annotation array
+let matchPlayers = [];   // [E5/E6] match_players rows for current match
 let isAnnotationMode = true;
 let knownTeams = [];  // [FIX] autocomplete: preloaded from tournament_teams
 
@@ -1186,7 +1245,7 @@ async function signOut() { if (sb) await sb.auth.signOut(); }
 
 function resetLocalState() {
   tournaments=[]; days=[]; matches=[]; teams=[];
-  shapesCache={}; overlayState={}; annotations=[];
+  shapesCache={}; overlayState={}; annotations=[]; matchPlayers=[];
   knownTeams=[];
   state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
   refreshDropdowns(); renderTeamList(); updateRightPanel();
@@ -1268,6 +1327,27 @@ async function loadAnnotations(matchId) {
   } catch(e) {
     annotations=[]; renderAnnotationLog();
   }
+}
+
+// [E5/E6] Load match_players (with player name) for current match
+async function loadMatchPlayers(matchId) {
+  matchPlayers = [];
+  if(!sb||!matchId||!currentUser) return;
+  try {
+    const {data,error}=await sb.from('match_players')
+      .select('id, player_id, kills, damage, time_of_loss, players(name)')
+      .eq('match_id', matchId)
+      .eq('user_id', currentUser.id)
+      .order('created_at');
+    if(!error && data) matchPlayers = data.map(r=>({
+      id: r.id,
+      player_id: r.player_id,
+      name: r.players?.name || 'Unknown',
+      kills: r.kills||0,
+      damage: r.damage||0,
+      time_of_loss: r.time_of_loss ?? null,
+    }));
+  } catch(e) { matchPlayers=[]; }
 }
 
 // ══════════════════════════════════════════════════════
@@ -2175,6 +2255,7 @@ async function _activateMatch(match, statusMsg) {
   if (sb && state.matchId) await loadShapesForMatch(state.matchId);
   annotations = [];
   await loadAnnotations(state.matchId);
+  await loadMatchPlayers(state.matchId);
   // [FIX] Preload known teams for autocomplete
   if (state.tournamentId) await preloadKnownTeams(state.tournamentId);
 
@@ -2239,6 +2320,7 @@ document.getElementById('sel-match').onchange=async function(){
   }
   renderTeamList(); draw(); updateRightPanel();
   await loadAnnotations(state.matchId);
+  await loadMatchPlayers(state.matchId);
   renderTimelineTicks();
 };
 
@@ -2569,12 +2651,107 @@ function downloadSnapshot() {
 // ══════════════════════════════════════════════════════
 // TIMELINE ACTION BUTTONS
 // ══════════════════════════════════════════════════════
+// ══ [E5] SELF ELIM MODAL ══════════════════════════════
+let semSelectedPlayerId = null;
+
 function markSelfElim() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
-  // For now just toast with the time — full implementation needs match_players table
-  toast(`⚡ SELF ELIM at ${fmtTime(state.time)}`, 'ok');
-  // Will store to self_elims table once Phase 3 SQL is run
+  semSelectedPlayerId = null;
+  document.getElementById('sem-time').textContent = fmtTime(state.time);
+  document.getElementById('sem-add-input').value = '';
+  document.getElementById('sem-confirm-btn').disabled = true;
+  renderSemPlayers();
+  document.getElementById('self-elim-modal').classList.add('show');
 }
+
+function renderSemPlayers() {
+  const container = document.getElementById('sem-player-select');
+  container.innerHTML = '';
+  // Alive = time_of_loss is null OR time_of_loss > current T
+  const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
+  if (!alive.length) {
+    const empty = document.createElement('div');
+    empty.className = 'sem-empty';
+    empty.textContent = matchPlayers.length
+      ? 'No alive players at this time.'
+      : 'No players added yet.\nType a name below to add one.';
+    container.appendChild(empty);
+    return;
+  }
+  alive.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'sem-player' + (p.id === semSelectedPlayerId ? ' selected' : '');
+    row.innerHTML = `<div class="sem-player-dot"></div><span>${p.name}</span>`;
+    row.onclick = () => {
+      semSelectedPlayerId = p.id;
+      document.getElementById('sem-confirm-btn').disabled = false;
+      renderSemPlayers();
+    };
+    container.appendChild(row);
+  });
+}
+
+async function semAddPlayer() {
+  const input = document.getElementById('sem-add-input');
+  const name = input.value.trim();
+  if (!name) { toast('ENTER A PLAYER NAME','warn'); return; }
+  input.value = '';
+  if (!sb || !currentUser || !state.matchId) return;
+  try {
+    // Upsert into players table, then link to match_players
+    const { data: pData, error: pErr } = await sb.from('players')
+      .insert({ name, user_id: currentUser.id }).select().single();
+    if (pErr) throw pErr;
+    const { data: mpData, error: mpErr } = await sb.from('match_players')
+      .insert({ match_id: state.matchId, player_id: pData.id, user_id: currentUser.id }).select().single();
+    if (mpErr) throw mpErr;
+    matchPlayers.push({ id: mpData.id, player_id: pData.id, name, kills: 0, damage: 0, time_of_loss: null });
+    renderSemPlayers();
+    toast(`${name} added`,'ok');
+  } catch(e) { toast('ERROR: '+e.message,'err'); }
+}
+
+async function confirmSelfElim() {
+  if (!semSelectedPlayerId) return;
+  const player = matchPlayers.find(p => p.id === semSelectedPlayerId);
+  if (!player) return;
+  closeSelfElimModal();
+  // Save to self_elims
+  if (sb && currentUser && !String(state.matchId).startsWith('local_')) {
+    try {
+      await sb.from('self_elims').insert({
+        match_id: state.matchId,
+        player_id: player.player_id,
+        user_id: currentUser.id,
+        time_seconds: state.time,
+      });
+      // Increment kills on match_players
+      player.kills = (player.kills||0) + 1;
+      await sb.from('match_players').update({ kills: player.kills }).eq('id', player.id);
+    } catch(e) { toast('SAVE ERROR: '+e.message,'err'); }
+  }
+  // Log entry
+  const logEntry = {
+    time_seconds: state.time,
+    title: `${player.name} secured elim @ ${fmtTime(state.time)}`,
+    body: '',
+    _ephemeral: true,
+    id: 'local_elim_'+Date.now(),
+  };
+  annotations.push(logEntry);
+  renderAnnotationLog({scrollToTop:true});
+  toast(`⚡ ${player.name} secured elim @ ${fmtTime(state.time)}`,'ok');
+}
+
+function closeSelfElimModal() {
+  document.getElementById('self-elim-modal').classList.remove('show');
+  semSelectedPlayerId = null;
+}
+
+document.getElementById('sem-add-input').onkeydown = e => {
+  if (e.key === 'Enter') semAddPlayer();
+  if (e.key === 'Escape') closeSelfElimModal();
+};
 
 function markSelfWipe() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
@@ -2612,21 +2789,62 @@ function updateSelfButtonState() {
   });
 }
 
+// ══ [E6] SELF LOSS MODAL ══════════════════════════════
 function markSelfLoss() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
-  // Open player selection modal (placeholder — needs match_players Phase 3)
-  document.getElementById('slm-time').textContent=fmtTime(state.time);
-  document.getElementById('slm-players').innerHTML=`
-    <div class="slm-player" onclick="closeSelfLossModal();toast('Player loss recorded at ${fmtTime(state.time)}','ok');">Player 1</div>
-    <div class="slm-player" onclick="closeSelfLossModal();toast('Player loss recorded at ${fmtTime(state.time)}','ok');">Player 2</div>
-    <div class="slm-player" onclick="closeSelfLossModal();toast('Player loss recorded at ${fmtTime(state.time)}','ok');">Player 3</div>
-    <div class="slm-player" onclick="closeSelfLossModal();toast('Player loss recorded at ${fmtTime(state.time)}','ok');">Player 4</div>
-    <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);padding:4px 0;">
-      Add named players from Dashboard once Phase 3 DB is set up.
-    </div>
-  `;
+  document.getElementById('slm-time').textContent = fmtTime(state.time);
+  renderSlmPlayers();
   document.getElementById('self-loss-modal').classList.add('show');
 }
+
+function renderSlmPlayers() {
+  const container = document.getElementById('slm-players');
+  container.innerHTML = '';
+  // [E6] Only show alive players at current T
+  const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
+  if (!alive.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:8px 0;';
+    empty.textContent = matchPlayers.length ? 'No alive players at this time.' : 'No players yet — add via ⚡ Self Elim first.';
+    container.appendChild(empty);
+    return;
+  }
+  alive.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'slm-player';
+    row.textContent = p.name;
+    row.onclick = () => confirmSelfLoss(p);
+    container.appendChild(row);
+  });
+}
+
+async function confirmSelfLoss(player) {
+  closeSelfLossModal();
+  // Save time_of_loss to match_players
+  player.time_of_loss = state.time;
+  if (sb && !String(player.id).startsWith('local_')) {
+    try {
+      await sb.from('match_players').update({ time_of_loss: state.time }).eq('id', player.id);
+    } catch(e) { toast('SAVE ERROR: '+e.message,'err'); }
+  }
+  // Log entry
+  annotations.push({
+    time_seconds: state.time,
+    title: `${player.name} lost @ ${fmtTime(state.time)}`,
+    body: '',
+    _ephemeral: true,
+    id: 'local_loss_'+Date.now(),
+  });
+  renderAnnotationLog({scrollToTop:true});
+  toast(`💀 ${player.name} down at ${fmtTime(state.time)}`,'ok');
+  // [E6] If last alive player → auto-trigger Self Wipe
+  const stillAlive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
+  if (stillAlive.length === 0) {
+    toast('☠ Last player down — triggering Self Wipe','warn');
+    setTimeout(markSelfWipe, 300);
+  }
+}
+
 function closeSelfLossModal(){ document.getElementById('self-loss-modal').classList.remove('show'); }
 
 function markEnemyWipe() {
