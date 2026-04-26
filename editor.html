@@ -759,6 +759,58 @@ canvas.path-mode{ cursor:cell; }
 }
 .btn-anm-save:hover{ opacity:.85; }
 
+/* ══ MULTI-TRACK [E9] ══ */
+.btn-multi-track{
+  width:100%;padding:8px 12px;background:var(--bg);color:var(--muted);
+  border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);
+  font-size:10px;font-weight:500;cursor:pointer;transition:all .15s;
+  letter-spacing:.06em;text-transform:uppercase;text-align:left;
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.btn-multi-track:hover{ border-color:var(--purple);color:var(--purple); }
+.btn-multi-track.active{ border-color:var(--purple);color:var(--purple);background:rgba(167,139,250,.08); }
+.btn-mt-indicator{
+  width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .2s;
+}
+.btn-multi-track.active .btn-mt-indicator{ background:var(--purple); }
+
+#multi-track-panel{ display:none;flex-direction:column;gap:6px;margin-bottom:4px; }
+#multi-track-panel.show{ display:flex; }
+
+.mt-team-row{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  cursor:pointer;transition:all .15s;
+}
+.mt-team-row:hover{ border-color:var(--muted2); }
+.mt-team-row.checked{ border-color:var(--purple);background:rgba(167,139,250,.07); }
+.mt-checkbox{
+  width:14px;height:14px;border:2px solid var(--border);border-radius:3px;
+  display:flex;align-items:center;justify-content:center;font-size:9px;
+  flex-shrink:0;transition:all .15s;font-weight:700;
+}
+.mt-team-row.checked .mt-checkbox{ background:var(--purple);border-color:var(--purple);color:#020617; }
+.mt-team-dot{ width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+.mt-team-name{ flex:1;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+.mt-stats-wrap{ display:flex;flex-direction:column;gap:4px;margin-top:4px; }
+.mt-stat-row{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:5px;
+}
+.mt-stat-dot{ width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+.mt-stat-name{ flex:1;font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.mt-stat-pill{
+  font-family:var(--font-mono);font-size:9px;padding:2px 5px;
+  background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--muted);
+}
+
+#mt-log-filter{
+  padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);
+  color:var(--text);border-radius:5px;font-family:var(--font-mono);font-size:9px;
+  outline:none;cursor:pointer;
+}
+
 /* zoom label compat */
 #zoom-label{ display:none; }
 #sl-width,#sl-opacity{ margin:0; }
@@ -1038,9 +1090,24 @@ canvas.path-mode{ cursor:cell; }
       </div>
     </div>
 
+    <!-- Multi-Track [E9] -->
+    <div class="rp-section">
+      <button class="btn-multi-track" id="btn-multi-track" onclick="toggleMultiTrack()">
+        <div class="btn-mt-indicator"></div>
+        MULTI TRACK
+      </button>
+      <div id="multi-track-panel">
+        <div id="mt-team-select"></div>
+        <div id="mt-stats-section" class="mt-stats-wrap"></div>
+      </div>
+    </div>
+
     <!-- Event Annotation Log -->
     <div class="annotation-header">
       <div class="annotation-header-title">Event Log</div>
+      <select id="mt-log-filter" style="display:none" onchange="renderAnnotationLog()">
+        <option value="ALL">ALL TEAMS</option>
+      </select>
     </div>
     <div id="annotation-log"></div>
     <div class="annotation-footer">
@@ -1169,6 +1236,8 @@ let state = {
   mode:         'zone',
   time:         0,
   colorMode:    'type',
+  multiTrackActive: false,   // [E9]
+  multiTrackTeams:  [],      // [E9] array of team IDs
 };
 
 let filters = { zone:true, fight:true, rotation:true, pin:true };
@@ -1247,6 +1316,13 @@ function resetLocalState() {
   tournaments=[]; days=[]; matches=[]; teams=[];
   shapesCache={}; overlayState={}; annotations=[]; matchPlayers=[];
   knownTeams=[];
+  state.multiTrackActive=false; state.multiTrackTeams=[];
+  const btn=document.getElementById('btn-multi-track');
+  const panel=document.getElementById('multi-track-panel');
+  if(btn) btn.classList.remove('active');
+  if(panel) panel.classList.remove('show');
+  const logFilter=document.getElementById('mt-log-filter');
+  if(logFilter) logFilter.style.display='none';
   state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
   refreshDropdowns(); renderTeamList(); updateRightPanel();
 }
@@ -1757,6 +1833,16 @@ function draw() {
     const shapes=shapesCache[team.id]||[];
     shapes.forEach(s=>{ if(!shouldShowShape(s,ov.filters)) return; drawShape(s,false,team.color,.5); });
   });
+
+  // [E9] Multi-track: render all selected teams
+  if(state.multiTrackActive && state.multiTrackTeams.length){
+    state.multiTrackTeams.forEach(tid=>{
+      if(tid===state.activeTeamId) return; // active team drawn below at full alpha
+      const team=teams.find(t=>t.id===tid); if(!team) return;
+      const shapes=shapesCache[tid]||[];
+      shapes.forEach(s=>{ if(!filters[s.tag]||s.time>state.time) return; drawShape(s,false,team.color,.9); });
+    });
+  }
 
   // Active team
   const activeTeam=getActiveTeam();
@@ -2520,6 +2606,7 @@ document.getElementById('temporal-slider').addEventListener('input', function(){
   draw();
   renderAnnotationLog({scrubSync:true});
   updateSelfButtonState();
+  if(state.multiTrackActive) renderMultiTrackStats();
 });
 
 function renderTimelineTicks() {
@@ -2979,20 +3066,28 @@ function renderAnnotationLog(opts) {
   const container=document.getElementById('annotation-log');
   container.innerHTML='';
 
+  // [E9] Active team filter from mt-log-filter dropdown
+  const filterSel=document.getElementById('mt-log-filter');
+  const logTeamFilter=filterSel?.value||'ALL';
+
   // Combine annotations + shape events for the log
   const events=[];
 
-  // Real annotations
+  // Real annotations (not filtered by team — always show all notes)
   annotations.forEach(a=>{
-    events.push({ time:a.time_seconds, type:'note', title:a.title, body:a.body, icon:'📝', iconClass:'note' });
+    events.push({ time:a.time_seconds, type:'note', title:a.title, body:a.body, icon:'📝', iconClass:'note', teamId:null });
   });
 
-  // Shape events from active + overlay teams
+  // Determine which teams to show in log
   const matchTeams=teams.filter(t=>t.match_id===state.matchId);
-  matchTeams.forEach(team=>{
-    const isActive=team.id===state.activeTeamId;
-    const ov=overlayState[team.id];
-    if(!isActive&&!ov?.visible) return;
+  const logTeams = state.multiTrackActive && state.multiTrackTeams.length
+    ? matchTeams.filter(t=>state.multiTrackTeams.includes(t.id))
+    : matchTeams.filter(t=>{ const isActive=t.id===state.activeTeamId; const ov=overlayState[t.id]; return isActive||ov?.visible; });
+
+  logTeams.forEach(team=>{
+    // [E9] Team filter
+    if(logTeamFilter!=='ALL' && team.id!==logTeamFilter) return;
+
     (shapesCache[team.id]||[]).forEach(s=>{
       if(s.type==='path') return;
       let icon,iconClass,title;
@@ -3000,11 +3095,11 @@ function renderAnnotationLog(opts) {
       else if(s.type==='fight'){ icon='⚔'; iconClass='fight'; title=`${s.teamA||'?'} vs ${s.teamB||'?'}`; }
       else if(s.type==='pin'){  icon='📍'; iconClass='pin';   title=s.label||'Pin'; }
       else if(s.type==='line'){ icon='→';  iconClass='zone';  title=`Rotation — ${team.name}`; }
-      events.push({ time:s.time||0, type:s.type, title, icon, iconClass });
+      events.push({ time:s.time||0, type:s.type, title, icon, iconClass, teamId:team.id, teamColor:team.color });
     });
     // Wipe events
     if(team.time_of_wipe){
-      events.push({ time:team.time_of_wipe, type:'wipe', title:`${team.name} WIPED`, icon:team.is_self?'☠':'⚑', iconClass:'wipe' });
+      events.push({ time:team.time_of_wipe, type:'wipe', title:`${team.name} WIPED`, icon:team.is_self?'☠':'⚑', iconClass:'wipe', teamId:team.id, teamColor:team.color });
     }
   });
 
@@ -3029,11 +3124,16 @@ function renderAnnotationLog(opts) {
     const bodyEl=document.createElement('div'); bodyEl.className='annotation-body';
     const titleEl=document.createElement('div'); titleEl.className='annotation-title'; titleEl.textContent=ev.title;
     const timeEl=document.createElement('div'); timeEl.className='annotation-time'; timeEl.textContent=fmtTime(ev.time);
+    // [E9] Team color dot in multi-track mode
+    if(state.multiTrackActive && ev.teamColor){
+      const dot=document.createElement('span');
+      dot.style.cssText=`display:inline-block;width:6px;height:6px;border-radius:50%;background:${ev.teamColor};margin-right:4px;vertical-align:middle;flex-shrink:0;`;
+      titleEl.prepend(dot);
+    }
     bodyEl.appendChild(titleEl); bodyEl.appendChild(timeEl);
     if(ev.body){ const subEl=document.createElement('div'); subEl.className='annotation-sub'; subEl.textContent=ev.body; bodyEl.appendChild(subEl); }
     entry.appendChild(iconEl); entry.appendChild(bodyEl);
     container.appendChild(entry);
-    // Track the last lit entry (lowest time ≤ current, which appears last in reversed list = bottom of lit block)
     if(isLit) lastLitEl=entry;
   });
 
@@ -3073,6 +3173,123 @@ function updateFactionBadges() {
   if(matchTeams.length>8){
     const more=document.createElement('span'); more.style.cssText='font-family:var(--font-mono);font-size:9px;color:var(--muted);align-self:center;'; more.textContent=`+${matchTeams.length-8} more`; container.appendChild(more);
   }
+}
+
+// ══════════════════════════════════════════════════════
+// [E9] MULTI-TRACK MODE
+// ══════════════════════════════════════════════════════
+function toggleMultiTrack() {
+  state.multiTrackActive = !state.multiTrackActive;
+  const btn = document.getElementById('btn-multi-track');
+  const panel = document.getElementById('multi-track-panel');
+  btn.classList.toggle('active', state.multiTrackActive);
+  panel.classList.toggle('show', state.multiTrackActive);
+
+  if (state.multiTrackActive) {
+    // Default: include active team in multi-track selection
+    if (!state.multiTrackTeams.length && state.activeTeamId) {
+      state.multiTrackTeams = [state.activeTeamId];
+    }
+    renderMultiTrackPanel();
+    // Load shapes for all match teams (so they're available to render)
+    const matchTeams = teams.filter(t => t.match_id === state.matchId);
+    matchTeams.forEach(t => {
+      if (!shapesCache[t.id] || shapesCache[t.id].length === 0) {
+        if (sb && !String(t.id).startsWith('local_')) loadTeamShapes(t.id);
+      }
+    });
+  } else {
+    // Deactivate — clear selection, hide log filter
+    state.multiTrackTeams = [];
+    document.getElementById('mt-log-filter').style.display = 'none';
+  }
+  renderAnnotationLog();
+  draw();
+}
+
+function renderMultiTrackPanel() {
+  const matchTeams = teams.filter(t => t.match_id === state.matchId);
+  const listEl = document.getElementById('mt-team-select');
+  listEl.innerHTML = '';
+
+  if (!matchTeams.length) {
+    listEl.innerHTML = '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:4px 0;">No teams in this match.</div>';
+    return;
+  }
+
+  matchTeams.forEach(team => {
+    const checked = state.multiTrackTeams.includes(team.id);
+    const row = document.createElement('div');
+    row.className = 'mt-team-row' + (checked ? ' checked' : '');
+    row.innerHTML = `
+      <div class="mt-checkbox">${checked ? '✓' : ''}</div>
+      <div class="mt-team-dot" style="background:${team.color}"></div>
+      <div class="mt-team-name">${team.name}</div>
+    `;
+    row.onclick = () => toggleMtTeam(team.id);
+    listEl.appendChild(row);
+  });
+
+  renderMultiTrackStats();
+  updateMtLogFilter(matchTeams);
+}
+
+function toggleMtTeam(teamId) {
+  const idx = state.multiTrackTeams.indexOf(teamId);
+  if (idx === -1) {
+    state.multiTrackTeams.push(teamId);
+    // Load shapes if not cached
+    if ((!shapesCache[teamId] || shapesCache[teamId].length === 0) && sb && !String(teamId).startsWith('local_')) {
+      loadTeamShapes(teamId);
+    }
+  } else {
+    state.multiTrackTeams.splice(idx, 1);
+  }
+  renderMultiTrackPanel();
+  renderAnnotationLog();
+  draw();
+}
+
+function renderMultiTrackStats() {
+  const statsEl = document.getElementById('mt-stats-section');
+  statsEl.innerHTML = '';
+  if (!state.multiTrackTeams.length) return;
+
+  state.multiTrackTeams.forEach(tid => {
+    const team = teams.find(t => t.id === tid); if (!team) return;
+    const shapes = shapesCache[tid] || [];
+    const visibleShapes = shapes.filter(s => s.time <= state.time);
+    const zones = visibleShapes.filter(s => s.type === 'circle').length;
+    const rots  = visibleShapes.filter(s => s.type === 'line' || s.type === 'path').length;
+    const fights= visibleShapes.filter(s => s.type === 'fight').length;
+    const pins  = visibleShapes.filter(s => s.type === 'pin').length;
+    const wiped = team.time_of_wipe != null && state.time >= team.time_of_wipe;
+
+    const row = document.createElement('div');
+    row.className = 'mt-stat-row';
+    row.innerHTML = `
+      <div class="mt-stat-dot" style="background:${team.color}"></div>
+      <div class="mt-stat-name">${team.name}${wiped ? ' <span style="color:var(--red);font-size:9px;">WIPED</span>' : ''}</div>
+      <span class="mt-stat-pill" title="Zones">⭕${zones}</span>
+      <span class="mt-stat-pill" title="Rotations">→${rots}</span>
+      <span class="mt-stat-pill" title="Fights">⚔${fights}</span>
+      <span class="mt-stat-pill" title="Pins">📍${pins}</span>
+    `;
+    statsEl.appendChild(row);
+  });
+}
+
+function updateMtLogFilter(matchTeams) {
+  const sel = document.getElementById('mt-log-filter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="ALL">ALL TEAMS</option>';
+  matchTeams.forEach(t => {
+    const opt = new Option(t.name, t.id);
+    sel.add(opt);
+  });
+  // Restore previous selection if still valid
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  sel.style.display = state.multiTrackActive ? 'block' : 'none';
 }
 </script>
 </body>
