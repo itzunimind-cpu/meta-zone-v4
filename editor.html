@@ -573,11 +573,12 @@ canvas.path-mode{ cursor:cell; }
   padding:10px 14px;border-top:1px solid var(--border-dim);
 }
 .btn-add-annotation{
-  width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--muted);
-  border-radius:6px;font-family:var(--font-mono);font-size:10px;font-weight:500;
-  cursor:pointer;transition:all .15s;letter-spacing:.06em;text-transform:uppercase;
+  display:block;width:100%;padding:8px 14px;margin:0;
+  background:var(--bg);border:none;border-bottom:1px solid var(--border-dim);
+  color:var(--muted);font-family:var(--font-mono);font-size:10px;font-weight:500;
+  cursor:pointer;transition:all .15s;letter-spacing:.06em;text-transform:uppercase;text-align:left;
 }
-.btn-add-annotation:hover{ border-color:var(--purple);color:var(--purple); }
+.btn-add-annotation:hover{ background:rgba(167,139,250,.06);color:var(--purple); }
 
 /* ══════════════════════════════════════════
    RESULTS PANEL (slides up on match end)
@@ -1256,6 +1257,7 @@ canvas.path-mode{ cursor:cell; }
     </div>
 
     <!-- Event Annotation Log -->
+    <button class="btn-add-annotation" id="btn-add-annotation" onclick="openAnnotationModal()">+ ADD NOTE AT CURRENT TIME</button>
     <div class="annotation-header">
       <div class="annotation-header-title">Event Log</div>
       <select id="mt-log-filter" style="display:none" onchange="renderAnnotationLog()">
@@ -1263,9 +1265,6 @@ canvas.path-mode{ cursor:cell; }
       </select>
     </div>
     <div id="annotation-log"></div>
-    <div class="annotation-footer">
-      <button class="btn-add-annotation" id="btn-add-annotation" onclick="openAnnotationModal()">+ ADD NOTE AT CURRENT TIME</button>
-    </div>
 
   </div>
 </div>
@@ -1786,6 +1785,11 @@ function getNextZonePhase() {
   return zones.length + 1;
 }
 
+function getNextRotationIndex(teamId) {
+  const shapes = shapesCache[teamId] || [];
+  return shapes.filter(s => s.tag === 'rotation').length + 1;
+}
+
 
 function queueForSave() { setSaveState('idle'); renderTimelineTicks(); }
 
@@ -2156,7 +2160,8 @@ function onPointerUp(e) {
     if(e.changedTouches&&pathDrawing&&pathPoints.length>=2){
       const shapes=getActiveShapes();
       if(shapes){
-        const shape={type:'path',points:[...pathPoints],tag:'rotation',time:state.time};
+        const rotIdx = getNextRotationIndex(state.activeTeamId);
+        const shape={type:'path',points:[...pathPoints],tag:'rotation',time:state.time,rotation_index:rotIdx};
         shapes.push(shape); queueForSave(shape);
       }
       cancelPath(); draw();
@@ -2184,7 +2189,10 @@ function onPointerUp(e) {
   const dx=wx-dSX, dy=wy-dSY, dist=Math.sqrt(dx*dx+dy*dy);
   if(dist<4/zoom){ preview=null; draw(); return; }
   let shape=null;
-  if(state.mode==='rotation') shape={type:'line',x1:dSX,y1:dSY,x2:wx,y2:wy,tag:'rotation',time:state.time};
+  if(state.mode==='rotation'){
+    const rotIdx = getNextRotationIndex(state.activeTeamId);
+    shape={type:'line',x1:dSX,y1:dSY,x2:wx,y2:wy,tag:'rotation',time:state.time,rotation_index:rotIdx};
+  }
   if(shape){ shapes.push(shape); queueForSave(shape); }
   preview=null; draw();
 }
@@ -2199,7 +2207,8 @@ function onDblClick(e) {
   if(state.mode==='path'&&pathDrawing&&pathPoints.length>=2){
     const shapes=getActiveShapes();
     if(shapes){
-      const shape={type:'path',points:[...pathPoints],tag:'rotation',time:state.time};
+      const rotIdx = getNextRotationIndex(state.activeTeamId);
+      const shape={type:'path',points:[...pathPoints],tag:'rotation',time:state.time,rotation_index:rotIdx};
       shapes.push(shape); queueForSave(shape);
     }
     cancelPath(); draw();
@@ -3663,7 +3672,7 @@ function renderAnnotationLog(opts) {
   logTeams.forEach(team=>{
     if(logTeamFilter!=='ALL' && team.id!==logTeamFilter) return;
 
-    // Compute per-team rotation counter (lines + paths tagged rotation, in order)
+    // Compute per-team rotation counter (use stored rotation_index if present, else count)
     let rotIdx = 0;
 
     (shapesCache[team.id]||[]).forEach(s=>{
@@ -3671,11 +3680,11 @@ function renderAnnotationLog(opts) {
       let icon,iconClass,title;
 
       if(s.type==='line' && s.tag==='rotation'){
-        rotIdx++;
-        icon='→'; iconClass='zone'; title=`${team.name} — Rotation ${rotIdx}`;
+        const n = s.rotation_index || ++rotIdx;
+        icon='→'; iconClass='zone'; title=`${team.name} — Rotation ${n}`;
       } else if(s.type==='path' && s.tag==='rotation'){
-        rotIdx++;
-        icon='↝'; iconClass='zone'; title=`${team.name} — Rotation ${rotIdx}`;
+        const n = s.rotation_index || ++rotIdx;
+        icon='↝'; iconClass='zone'; title=`${team.name} — Rotation ${n}`;
       } else if(s.type==='fight'){
         icon='⚔'; iconClass='fight'; title=`${team.name} — Fight: ${s.teamA||'?'} vs ${s.teamB||'?'}`;
       } else if(s.type==='pin'){
