@@ -1718,16 +1718,30 @@ let _apmSelectedIds = new Set(); // player_id → selected
 let _apmAllPlayers  = [];        // [{id, name, role}] from tournament_players
 
 async function openActivePlayersModal(matchId) {
-  if(!sb||!matchId||!state.tournamentId||!currentUser) return;
+  if(!sb||!matchId||!currentUser) return;
+  // Use passed matchId OR state.matchId
+  const mid = matchId || state.matchId;
+  const tid = state.tournamentId;
+  if(!mid) return;
+
   _apmSelectedIds = new Set();
   _apmAllPlayers  = [];
 
-  // Load tournament_players for this tournament
+  // Show modal immediately with loading state
+  document.getElementById('apm-players').innerHTML = '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:16px;">Loading roster…</div>';
+  document.getElementById('btn-apm-confirm').disabled = true;
+  document.getElementById('active-players-modal').classList.add('show');
+
+  if(!tid) {
+    document.getElementById('apm-players').innerHTML = '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:16px;">No tournament selected.</div>';
+    return;
+  }
+
   try {
     const {data,error} = await sb
       .from('tournament_players')
       .select('player_id, players(id, name, role)')
-      .eq('tournament_id', state.tournamentId)
+      .eq('tournament_id', tid)
       .eq('user_id', currentUser.id);
     if(!error && data) {
       _apmAllPlayers = data
@@ -1737,7 +1751,6 @@ async function openActivePlayersModal(matchId) {
   } catch(e) { /* non-fatal */ }
 
   _renderApmPlayers();
-  document.getElementById('active-players-modal').classList.add('show');
 }
 
 function _renderApmPlayers() {
@@ -1793,25 +1806,20 @@ async function confirmActivePlayers() {
   if(_apmSelectedIds.size < 4) { toast('Select at least 4 players.', 'warn'); return; }
   closeActivePlayersModal();
 
-  if(!sb||!state.matchId||!currentUser) return;
+  const mid = state.matchId;
+  if(!sb||!mid||!currentUser) return;
   try {
     const rows = [..._apmSelectedIds].map(pid => ({
-      match_id:   state.matchId,
-      player_id:  pid,
-      user_id:    currentUser.id,
-      kills:      0,
-      damage:     0,
+      match_id: mid, player_id: pid, user_id: currentUser.id, kills: 0, damage: 0,
     }));
-    const {data, error} = await sb.from('match_players').insert(rows).select('id, player_id, kills, damage, time_of_loss, players(name)');
+    const {data, error} = await sb.from('match_players').insert(rows)
+      .select('id, player_id, kills, damage, time_of_loss, players(name)');
     if(error) throw error;
     if(data) {
       matchPlayers = data.map(r=>({
-        id: r.id,
-        player_id: r.player_id,
+        id: r.id, player_id: r.player_id,
         name: r.players?.name || 'Unknown',
-        kills: r.kills||0,
-        damage: r.damage||0,
-        time_of_loss: null,
+        kills: r.kills||0, damage: r.damage||0, time_of_loss: null,
       }));
     }
     toast(`Squad registered: ${matchPlayers.length} players`, 'ok');
@@ -3641,12 +3649,25 @@ function closeSelfLossModal() {
 async function markMatchEnd() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   const dur=state.time;
+  const m=matches.find(x=>x.id===state.matchId);
+  // Check if already ended — undo
+  if(m?.duration_seconds!=null) {
+    if(sb&&!String(state.matchId).startsWith('local_')){
+      await sb.from('matches').update({duration_seconds:null}).eq('id',state.matchId);
+    }
+    if(m) m.duration_seconds=null;
+    document.getElementById('match-meta-duration').textContent='—';
+    annotations=annotations.filter(a=>!a.id?.startsWith('local_matchend_'));
+    renderAnnotationLog(); toast('⏹ Match end removed','ok'); return;
+  }
   if(sb&&!String(state.matchId).startsWith('local_')){
     await sb.from('matches').update({duration_seconds:dur}).eq('id',state.matchId);
-    const m=matches.find(x=>x.id===state.matchId); if(m) m.duration_seconds=dur;
+    if(m) m.duration_seconds=dur;
   }
   document.getElementById('match-meta-duration').textContent=fmtTime(dur);
-  toast(`⏹ Match ended at ${fmtTime(dur)}`,'ok');
+  annotations.push({ time_seconds:dur, title:`Match ended`, _ephemeral:true, id:'local_matchend_'+Date.now() });
+  renderAnnotationLog({scrollToTop:true});
+  toast(`⏹ Match ended at ${fmtTime(dur)} — press again to undo`,'ok');
   await showResultsPanel();
 }
 
@@ -3744,6 +3765,56 @@ function openAnnotationModal() {
 
 function closeAnnotationModal(){ document.getElementById('annotation-modal').classList.remove('show'); }
 
+async function undoLogEvent(ev) {
+  if(ev.type === 'loss' && ev.annId) {
+    // Find which player this was and clear time_of_loss
+    const ann = annotations.find(a=>a.id===ev.annId);
+    if(ann) {
+      const name = ann.title.replace(/ lost @ .+$/,'');
+      const mp = matchPlayers.find(p=>p.name===name && p.time_of_loss!=null);
+      if(mp) {
+        mp.time_of_loss = null;
+        if(sb&&!String(mp.id).startsWith('local_')) await sb.from('match_players').update({time_of_loss:null,killed_by_team_id:null}).eq('id',mp.id);
+      }
+    }
+    annotations = annotations.filter(a=>a.id!==ev.annId);
+    renderAnnotationLog({scrollToTop:true});
+    toast('💀 Loss undone','ok');
+
+  } else if(ev.type === 'elim' && ev.annId) {
+    const ann = annotations.find(a=>a.id===ev.annId);
+    if(ann) {
+      const name = ann.title.replace(/ secured elim @ .+$/,'');
+      const finishes = ann._finishes || 1;
+      const mp = matchPlayers.find(p=>p.name===name);
+      if(mp) {
+        mp.kills = Math.max(0, (mp.kills||0) - finishes);
+        if(sb&&!String(mp.id).startsWith('local_')) await sb.from('match_players').update({kills:mp.kills}).eq('id',mp.id);
+        // Delete the self_elim row (most recent for this player)
+        if(sb&&mp.player_id&&state.matchId){
+          const {data:rows} = await sb.from('self_elims').select('id').eq('match_id',state.matchId).eq('player_id',mp.player_id).order('created_at',{ascending:false}).limit(1);
+          if(rows&&rows.length) await sb.from('self_elims').delete().eq('id',rows[0].id);
+        }
+      }
+    }
+    annotations = annotations.filter(a=>a.id!==ev.annId);
+    renderAnnotationLog({scrollToTop:true});
+    toast('⚡ Elim undone','ok');
+
+  } else if(ev.type === 'matchend') {
+    annotations = annotations.filter(a=>a.id!==ev.annId);
+    // Also clear from DB
+    const m = matches.find(x=>x.id===state.matchId);
+    if(m) {
+      m.duration_seconds = null;
+      if(sb&&!String(state.matchId).startsWith('local_')) await sb.from('matches').update({duration_seconds:null}).eq('id',state.matchId);
+    }
+    document.getElementById('match-meta-duration').textContent='—';
+    renderAnnotationLog({scrollToTop:true});
+    toast('⏹ Match end undone','ok');
+  }
+}
+
 async function saveAnnotation() {
   const title=document.getElementById('anm-title-input').value.trim();
   if(!title){ toast('ENTER A TITLE','warn'); return; }
@@ -3775,24 +3846,34 @@ function renderAnnotationLog(opts) {
 
   // ── Real annotations / notes (not team-filtered) ──
   annotations.forEach(a=>{
-    if(a._ephemeral) return; // ephemeral ones handled below as typed events
+    if(a._ephemeral) return;
     events.push({ time:a.time_seconds, type:'note', title:a.title, body:a.body, icon:'📝', iconClass:'note', teamId:null });
   });
 
-  // ── Self Loss events (ephemeral annotations with id prefix local_loss_) ──
-  annotations.filter(a=>a._ephemeral && a.id && String(a.id).startsWith('local_loss_')).forEach(a=>{
-    // title stored as "[name] lost @ ..." — extract name
+  // ── Self Loss events ──
+  annotations.filter(a=>a._ephemeral && a.id?.startsWith('local_loss_')).forEach(a=>{
     const name = a.title.replace(/ lost @ .+$/,'');
-    events.push({ time:a.time_seconds, type:'loss', title:`Lost — ${name}`, icon:'💀', iconClass:'wipe', teamId:null });
+    events.push({ time:a.time_seconds, type:'loss', title:`💀 Lost — ${name}`, icon:'💀', iconClass:'wipe', teamId:null, annId:a.id, undoable:true });
   });
 
-  // ── Self Elim events (ephemeral annotations with id prefix local_elim_) ──
-  annotations.filter(a=>a._ephemeral && a.id && String(a.id).startsWith('local_elim_')).forEach(a=>{
-    // title stored as "[name] secured elim @ ..."
+  // ── Self Elim events ──
+  annotations.filter(a=>a._ephemeral && a.id?.startsWith('local_elim_')).forEach(a=>{
     const name = a.title.replace(/ secured elim @ .+$/,'');
     const finishes = a._finishes || 1;
-    events.push({ time:a.time_seconds, type:'elim', title:`${name} — ${finishes} finish${finishes!==1?'es':''}`, icon:'⚡', iconClass:'fight', teamId:null });
+    events.push({ time:a.time_seconds, type:'elim', title:`⚡ ${name} — ${finishes} finish${finishes!==1?'es':''}`, icon:'⚡', iconClass:'fight', teamId:null, annId:a.id, undoable:true, _ann:a });
   });
+
+  // ── Match End event ──
+  annotations.filter(a=>a._ephemeral && a.id?.startsWith('local_matchend_')).forEach(a=>{
+    events.push({ time:a.time_seconds, type:'matchend', title:`⏹ Match ended`, icon:'⏹', iconClass:'zone', teamId:null, annId:a.id, undoable:true });
+  });
+  // Also show if saved to DB (duration_seconds set)
+  const curMatch = matches.find(m=>m.id===state.matchId);
+  const hasEnd = curMatch?.duration_seconds!=null;
+  const hasEndAnn = annotations.some(a=>a.id?.startsWith('local_matchend_'));
+  if(hasEnd && !hasEndAnn) {
+    events.push({ time:curMatch.duration_seconds, type:'matchend', title:`⏹ Match ended`, icon:'⏹', iconClass:'zone', teamId:null, undoable:true, isDbMatchEnd:true });
+  }
 
   // ── Determine which teams to show in log ──
   const matchTeams=teams.filter(t=>t.match_id===state.matchId);
@@ -3872,11 +3953,10 @@ function renderAnnotationLog(opts) {
     const isLit = ev.time<=state.time;
     entry.className='annotation-entry'+(isLit?'':' future')+(ev.isWipe?' wipe-entry':'');
     entry.dataset.evTime=ev.time;
+
     if(ev.isWipe) {
-      // Wipe entries: click jumps to time; second click at that time triggers undo
       entry.onclick=()=>{
         jumpToTime(ev.time);
-        // Add undo hint briefly
         const hint = entry.querySelector('.wipe-undo-hint');
         if(!hint){
           const h=document.createElement('div');
@@ -3887,6 +3967,21 @@ function renderAnnotationLog(opts) {
           setTimeout(()=>h.remove(), 3000);
         }
       };
+    } else if(ev.undoable && ev.annId) {
+      // Loss / Elim / MatchEnd — click jumps; second click shows undo
+      entry.onclick=()=>{
+        jumpToTime(ev.time);
+        const existing = entry.querySelector('.undo-btn');
+        if(existing){ existing.remove(); return; }
+        const btn=document.createElement('button');
+        btn.className='undo-btn';
+        btn.style.cssText='margin-top:4px;padding:3px 8px;background:none;border:1px solid var(--red);border-radius:4px;color:var(--red);font-family:var(--font-mono);font-size:9px;cursor:pointer;letter-spacing:1px;';
+        btn.textContent='↩ UNDO';
+        btn.onclick=(e)=>{ e.stopPropagation(); undoLogEvent(ev); };
+        entry.appendChild(btn);
+      };
+    } else if(ev.undoable && ev.isDbMatchEnd) {
+      entry.onclick=()=>{ jumpToTime(ev.time); markMatchEnd(); };
     } else {
       entry.onclick=()=>jumpToTime(ev.time);
     }
