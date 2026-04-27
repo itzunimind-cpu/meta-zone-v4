@@ -627,6 +627,39 @@ canvas.path-mode{ cursor:cell; }
 }
 .btn-results-save:hover{ opacity:.88; }
 
+/* ══ EDITOR MAP PICKER MODAL ══ */
+#editor-map-modal{
+  position:fixed;inset:0;background:rgba(2,6,23,.78);backdrop-filter:blur(5px);
+  z-index:500;display:none;align-items:center;justify-content:center;
+}
+#editor-map-modal.show{ display:flex; }
+.emm-box{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
+  padding:24px;width:360px;display:flex;flex-direction:column;gap:16px;
+}
+.emm-title{ font-family:var(--font-display);font-size:16px;font-weight:800;color:var(--text); }
+.emm-sub{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase; }
+.emm-maps{ display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+.emm-map-btn{
+  padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:8px;text-align:left;cursor:pointer;transition:all .15s;
+  font-family:var(--font-body);font-size:13px;font-weight:600;color:var(--muted);
+}
+.emm-map-btn:hover{ border-color:rgba(34,211,238,.4);color:var(--text); }
+.emm-map-btn.sel{ border-color:var(--accent);background:rgba(34,211,238,.07);color:var(--accent); }
+.emm-map-icon{ font-size:18px;display:block;margin-bottom:6px; }
+.emm-actions{ display:flex;gap:8px; }
+.btn-emm-cancel{
+  flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;
+}
+.btn-emm-cancel:hover{ border-color:var(--muted);color:var(--text); }
+.btn-emm-confirm{
+  flex:1;padding:9px;background:var(--accent);border:none;color:#020617;
+  border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;
+}
+.btn-emm-confirm:hover{ opacity:.85; }
+
 /* ══════════════════════════════════════════
    ENEMY WIPE MODAL
 ══════════════════════════════════════════ */
@@ -1378,6 +1411,32 @@ canvas.path-mode{ cursor:cell; }
     <div class="wm-actions">
       <button class="btn-wm-cancel" onclick="closeWipeModal()">CANCEL</button>
       <button class="btn-wm-confirm" onclick="confirmWipe()">CONFIRM WIPE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDITOR MAP PICKER MODAL ████████████████████ -->
+<div id="editor-map-modal">
+  <div class="emm-box">
+    <div class="emm-title">🗺 Select Map</div>
+    <div class="emm-sub">Choose the map for this match</div>
+    <div class="emm-maps">
+      <button class="emm-map-btn sel" data-map="erangel" onclick="selectEditorMap('erangel')">
+        <span class="emm-map-icon">🌿</span>Erangel
+      </button>
+      <button class="emm-map-btn" data-map="miramar" onclick="selectEditorMap('miramar')">
+        <span class="emm-map-icon">🏜️</span>Miramar
+      </button>
+      <button class="emm-map-btn" data-map="rondo" onclick="selectEditorMap('rondo')">
+        <span class="emm-map-icon">🌅</span>Rondo
+      </button>
+      <button class="emm-map-btn" data-map="sanhok" onclick="selectEditorMap('sanhok')">
+        <span class="emm-map-icon">🌴</span>Sanhok
+      </button>
+    </div>
+    <div class="emm-actions">
+      <button class="btn-emm-cancel" onclick="cancelEditorMapModal()">CANCEL</button>
+      <button class="btn-emm-confirm" onclick="confirmEditorMap()">CREATE MATCH</button>
     </div>
   </div>
 </div>
@@ -2498,17 +2557,41 @@ async function addDay() {
   refreshDropdowns(); renderTeamList(); updateRightPanel();
 }
 
+// ── Editor map picker modal ──
+let _emmSelectedMap = 'erangel';
+function selectEditorMap(key) {
+  _emmSelectedMap = key;
+  document.querySelectorAll('.emm-map-btn').forEach(b => b.classList.toggle('sel', b.dataset.map === key));
+}
+function cancelEditorMapModal() {
+  document.getElementById('editor-map-modal').classList.remove('show');
+}
+async function confirmEditorMap() {
+  document.getElementById('editor-map-modal').classList.remove('show');
+  await _doAddMatch(_emmSelectedMap);
+}
+
 async function addMatch() {
   if(!state.dayId){ toast('SELECT DAY FIRST','warn'); return; }
   if(!state.tournamentId){ toast('SELECT TOURNAMENT FIRST','warn'); return; }
+  // Show map picker first — creation happens in confirmEditorMap
+  _emmSelectedMap = 'erangel';
+  document.querySelectorAll('.emm-map-btn').forEach(b => b.classList.toggle('sel', b.dataset.map === 'erangel'));
+  document.getElementById('editor-map-modal').classList.add('show');
+}
+
+async function _doAddMatch(mapKey) {
   const existing = matches.filter(m=>m.day_id===state.dayId);
   const name = 'Match ' + String(existing.length + 1).padStart(2,'0');
   if(sb&&currentUser){
     setSyncState('syncing');
-    const {data,error}=await sb.from('matches').insert({name,day_id:state.dayId,map_key:state.mapKey,user_id:currentUser.id}).select().single();
-    if(error){ setSyncState('error'); toast('MATCH ERROR: '+error.message,'err'); console.error(error); return; }
+    const {data,error}=await sb.from('matches').insert({name,day_id:state.dayId,map_key:mapKey,user_id:currentUser.id}).select().single();
+    if(error){ setSyncState('error'); toast('MATCH ERROR: '+error.message,'err'); return; }
     matches.push(data); state.matchId=data.id;
-    // [M1] Auto-populate teams from tournament roster
+    // Load map
+    state.mapKey = mapKey;
+    loadMapKey(mapKey);
+    // [M1] Auto-populate teams
     try{
       const {data:tData}=await sb.from('tournaments').select('team_mode').eq('id',state.tournamentId).single();
       const mode=tData?.team_mode||'pool';
@@ -2516,26 +2599,28 @@ async function addMatch() {
         await populateTeamsFromPoolEditor(data.id);
         setSyncState('saved'); toast('Match created with roster teams','ok');
       } else {
-        // GROUPS — show picker, resolve after
         setSyncState('saved');
         await openGroupPickerEditor(data.id);
-        return; // editor group picker handles the rest
+        return; // group picker calls _finishMatchSetup after
       }
     } catch(e){
-      // Fallback to SELF only if M1 fails
       await createDefaultTeams(data.id);
       toast('Match added (roster load failed)','warn');
     }
   } else {
-    const fake={id:'local_'+Date.now(),name,day_id:state.dayId,map_key:state.mapKey};
+    const fake={id:'local_'+Date.now(),name,day_id:state.dayId,map_key:mapKey};
     matches.push(fake); state.matchId=fake.id; createDefaultTeamsLocal(fake.id);
   }
+  await _finishMatchSetup();
+}
+
+async function _finishMatchSetup() {
   state.activeTeamId=teams.find(t=>t.match_id===state.matchId)?.id||null;
   overlayState={};
   refreshDropdowns(); renderTeamList(); draw();
   updateRightPanel(); await loadAnnotations(state.matchId);
   setMapDisplayMode(true);
-  // [C3 Scenario 3] Open active players popup after inline match creation
+  // [C3 Scenario 3] Open active players popup
   if(sb && state.matchId && state.tournamentId) openActivePlayersModal(state.matchId);
 }
 
@@ -2564,7 +2649,8 @@ async function openGroupPickerEditor(matchId){
     await createDefaultTeams(matchId);
     state.activeTeamId=teams.find(t=>t.match_id===matchId)?.id||null;
     overlayState={}; refreshDropdowns(); renderTeamList(); draw(); updateRightPanel();
-    await loadAnnotations(matchId); return;
+    await loadAnnotations(matchId);
+    await _finishMatchSetup(); return;
   }
   const{data:members}=await sb.from('group_members').select('group_id').in('group_id',grps.map(g=>g.id));
   const counts={};
@@ -2613,6 +2699,7 @@ async function confirmEditorGroupPicker(){
   overlayState={}; refreshDropdowns(); renderTeamList(); draw(); updateRightPanel();
   await loadAnnotations(mid);
   toast('Teams loaded from groups','ok');
+  await _finishMatchSetup();
 }
 
 async function createDefaultTeams(matchId) {
