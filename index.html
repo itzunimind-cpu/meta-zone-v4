@@ -72,6 +72,72 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 .sidebar-scroll::-webkit-scrollbar{width:3px;}
 .sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
+/* [D1] NEW TOURNAMENT prominent CTA */
+.sidebar-cta{padding:12px;border-top:1px solid var(--border);}
+.btn-new-tournament{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 16px;background:var(--accent);color:#020617;border:none;border-radius:8px;
+  font-family:var(--font-display);font-size:13px;font-weight:800;letter-spacing:.5px;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;
+  box-shadow:0 0 20px rgba(34,211,238,.2);
+}
+.btn-new-tournament:hover{background:#67e8f9;box-shadow:0 0 28px rgba(34,211,238,.35);}
+.btn-new-tournament iconify-icon{font-size:15px;}
+
+/* [D2] Delete buttons on tree items */
+.t-del,.d-del{
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+  background:none;border:none;color:var(--muted2);cursor:pointer;border-radius:4px;
+  transition:all .15s;flex-shrink:0;font-size:12px;opacity:0;
+}
+.t-row:hover .t-del,.d-row:hover .d-del{opacity:1;}
+.t-del:hover,.d-del:hover{color:var(--red);background:rgba(248,113,113,.1);}
+
+/* [D2] Delete warning modal */
+#idx-delete-modal{
+  position:fixed;inset:0;background:rgba(2,6,23,.78);backdrop-filter:blur(5px);
+  z-index:600;display:none;align-items:center;justify-content:center;
+}
+#idx-delete-modal.show{display:flex;}
+.idm-box{
+  background:var(--bg-panel);border:1px solid var(--red);border-radius:10px;
+  padding:24px;width:320px;display:flex;flex-direction:column;gap:14px;
+}
+.idm-icon{font-size:28px;text-align:center;}
+.idm-title{font-family:var(--font-display);font-size:17px;font-weight:800;color:var(--text);text-align:center;}
+.idm-body{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:center;line-height:1.6;letter-spacing:.03em;}
+.idm-actions{display:flex;gap:8px;}
+.btn-idm-cancel{flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;}
+.btn-idm-cancel:hover{border-color:var(--muted);color:var(--text);}
+.btn-idm-confirm{flex:1;padding:9px;background:var(--red);border:none;color:#fff;border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;}
+.btn-idm-confirm:hover{opacity:.85;}
+
+/* [D3] Active players modal */
+#idx-apm{
+  position:fixed;inset:0;background:rgba(2,6,23,.78);backdrop-filter:blur(5px);
+  z-index:600;display:none;align-items:center;justify-content:center;
+}
+#idx-apm.show{display:flex;}
+.idx-apm-box{
+  background:var(--bg-panel);border:1px solid var(--accent);border-radius:10px;
+  padding:22px;width:320px;display:flex;flex-direction:column;gap:12px;max-height:80vh;
+}
+.idx-apm-title{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text);}
+.idx-apm-sub{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;line-height:1.6;}
+.idx-apm-count{font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:.08em;}
+.idx-apm-players{display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:220px;}
+.idx-apm-player{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;}
+.idx-apm-player:hover{border-color:var(--accent);}
+.idx-apm-player.sel{border-color:var(--accent);background:rgba(34,211,238,.08);color:var(--accent);}
+.idx-apm-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.idx-apm-role{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-left:auto;text-transform:uppercase;}
+.idx-apm-actions{display:flex;gap:8px;}
+.btn-iapm-skip{flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;}
+.btn-iapm-skip:hover{border-color:var(--muted);color:var(--text);}
+.btn-iapm-confirm{flex:1;padding:9px;background:var(--accent);border:none;color:#020617;border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;}
+.btn-iapm-confirm:hover{opacity:.85;}
+.btn-iapm-confirm:disabled{opacity:.35;cursor:not-allowed;}
+
 /* Tree items */
 .t-block{margin-bottom:4px;}
 .t-row{width:100%;display:flex;align-items:center;gap:7px;padding:9px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;text-align:left;}
@@ -303,8 +369,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
     <nav class="header-nav">
       <a href="index.html" class="nav-link active">DASHBOARD</a>
       <a href="editor.html" class="nav-link">EDITOR</a>
-      <a href="teams.html" class="nav-link">TEAMS</a>
-      <a href="heatmap.html" class="nav-link">HEATMAP</a>
+      <a href="tournament-create.html" class="nav-link">NEW TOURNAMENT</a>
+      <a href="tournament-editor.html" class="nav-link">TOURNAMENT EDITOR</a>
+      <a href="analytics.html" class="nav-link">TEAM ANALYTICS</a>
+      <a href="player.html" class="nav-link">PLAYER ANALYTICS</a>
+      <a href="history.html" class="nav-link">ALL TOURNAMENTS</a>
     </nav>
   </div>
   <div class="header-right">
@@ -323,16 +392,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
   <aside id="sidebar">
     <div class="sidebar-top">
       <span class="sb-label">Tournaments</span>
-      <div class="sb-actions">
-        <button class="sb-add-btn" onclick="goCreateTournament()" title="New Tournament">
-          <iconify-icon icon="lucide:plus"></iconify-icon> NEW
-        </button>
-      </div>
     </div>
     <div class="sidebar-scroll" id="tournament-tree">
       <div style="padding:32px 16px;text-align:center;">
         <iconify-icon icon="lucide:loader-2" style="font-size:24px;color:var(--muted);animation:spin 1s linear infinite;"></iconify-icon>
       </div>
+    </div>
+    <!-- [D1] Prominent NEW TOURNAMENT CTA -->
+    <div class="sidebar-cta">
+      <button class="btn-new-tournament" onclick="goCreateTournament()">
+        <iconify-icon icon="lucide:plus-circle"></iconify-icon> NEW TOURNAMENT
+      </button>
     </div>
     <div class="sidebar-foot">
       <div class="rep-labels">
@@ -598,6 +668,7 @@ function renderTree(){
         <button class="t-settings" onclick="event.stopPropagation();goTournamentEditor('${t.id}')" title="Tournament settings">
           <iconify-icon icon="lucide:settings-2"></iconify-icon>
         </button>
+        <button class="t-del" onclick="event.stopPropagation();deleteTournament('${t.id}')" title="Delete tournament">✕</button>
         <iconify-icon icon="lucide:chevron-down" class="t-chev${t.open?' open':''}"></iconify-icon>
       </button>
       ${t.open?`
@@ -607,6 +678,7 @@ function renderTree(){
             <button class="d-row${activeDayId===d.id?' sel':''}" onclick="selectDay('${t.id}','${d.id}')">
               <span class="d-name">${esc(d.name)}</span>
               ${d.match_count?`<span class="d-badge">${d.match_count}</span>`:''}
+              <button class="d-del" onclick="event.stopPropagation();deleteDay('${t.id}','${d.id}')" title="Delete day">✕</button>
             </button>
           `).join('')}
           <button class="d-add-btn" onclick="addDay('${t.id}')">
@@ -672,9 +744,11 @@ function toggleT(id){
 
 // ── TOURNAMENT ACTIONS ──
 function goCreateTournament(){
+  mzCtxWrite();
   window.location.href='tournament-create.html';
 }
 function goTournamentEditor(tid){
+  mzCtxWrite({tournamentId:tid});
   window.location.href='tournament-editor.html?tournamentId='+tid;
 }
 
@@ -866,7 +940,7 @@ async function confirmNewMatch(){
   if(mode==='pool'){
     await populateTeamsFromPool(data.id);
     setStatus('SAVED');
-    window.location.href=`editor.html?matchId=${data.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+    await maybeOpenActivePlayersModal(data.id);
   } else {
     // GROUPS — show picker modal
     setStatus('READY');
@@ -894,9 +968,9 @@ async function openGroupPicker(matchId){
   selectedGroupIds=new Set();
   const{data:grps}=await sb.from('groups').select('id,name').eq('tournament_id',activeTournamentId).order('created_at');
   if(!grps||grps.length===0){
-    // No groups defined — just insert SELF and redirect
+    // No groups defined — just insert SELF and open squad modal
     await sb.from('teams').insert({name:'SELF',match_id:matchId,user_id:currentUser.id,is_self:true,color:TEAM_COLORS[0],slot_index:0,kills:0});
-    window.location.href=`editor.html?matchId=${matchId}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+    await maybeOpenActivePlayersModal(matchId);
     return;
   }
   // Fetch member counts per group
@@ -943,7 +1017,7 @@ async function confirmGroupPicker(){
     await sb.from('teams').insert(rows);
   }
   setStatus('SAVED');
-  window.location.href=`editor.html?matchId=${newMatchId}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+  await maybeOpenActivePlayersModal(newMatchId);
 }
 
 // ── UTILS ──
@@ -959,9 +1033,195 @@ function toast(msg,type=''){
   setTimeout(()=>el.remove(),3500);
 }
 
+// ── SESSIONSTORE CONTEXT ──
+function mzCtxWrite(extra){
+  const ctx={tournamentId:activeTournamentId,dayId:activeDayId,matchId:activeMatchId,...(extra||{})};
+  try{sessionStorage.setItem('mz_ctx',JSON.stringify(ctx));}catch(e){}
+}
+function mzCtxRead(){
+  try{return JSON.parse(sessionStorage.getItem('mz_ctx')||'{}');}catch(e){return{};}
+}
+
+// ── [D2] DELETE WARNING MODAL ──
+let _idmCb=null;
+function showDeleteWarning(title,body,onConfirm,confirmLabel){
+  _idmCb=onConfirm;
+  document.getElementById('idm-title').textContent=title;
+  document.getElementById('idm-body').textContent=body;
+  document.getElementById('idm-confirm-btn').textContent=confirmLabel||'DELETE';
+  document.getElementById('idx-delete-modal').classList.add('show');
+}
+function closeDeleteWarning(){document.getElementById('idx-delete-modal').classList.remove('show');_idmCb=null;}
+function _idmConfirm(){closeDeleteWarning();if(typeof _idmCb==='function')_idmCb();}
+
+async function deleteTournament(tid){
+  const t=tournaments.find(x=>x.id===tid);
+  if(!t)return;
+  showDeleteWarning(
+    `Delete "${t.name}"?`,
+    'This will permanently delete the tournament and ALL its days, matches and drawings.',
+    async()=>{
+      setStatus('DELETING…');
+      try{
+        const dIds=t.days.map(d=>d.id);
+        // Load matches for all days
+        let mIds=[];
+        if(dIds.length){
+          const{data:ms}=await sb.from('matches').select('id').in('day_id',dIds);
+          mIds=(ms||[]).map(m=>m.id);
+        }
+        if(mIds.length){
+          const{data:tms}=await sb.from('teams').select('id').in('match_id',mIds);
+          const tmIds=(tms||[]).map(t=>t.id);
+          if(tmIds.length) await sb.from('shapes').delete().in('team_id',tmIds);
+          await sb.from('teams').delete().in('match_id',mIds);
+          await sb.from('matches').delete().in('day_id',dIds);
+        }
+        if(dIds.length) await sb.from('days').delete().in('id',dIds);
+        await sb.from('tournaments').delete().eq('id',tid);
+        tournaments=tournaments.filter(x=>x.id!==tid);
+        if(activeTournamentId===tid){activeTournamentId=null;activeDayId=null;activeMatchId=null;matches=[];selectedMatch=null;}
+        renderTree();renderDayTabs();renderGrid();renderRP();
+        setStatus('READY');toast('Tournament deleted','ok');
+      }catch(e){setStatus('ERROR');toast('Delete failed: '+e.message,'err');}
+    },
+    'DELETE TOURNAMENT'
+  );
+}
+
+async function deleteDay(tid,did){
+  const t=tournaments.find(x=>x.id===tid);
+  const d=t?.days.find(x=>x.id===did);
+  if(!d)return;
+  showDeleteWarning(
+    `Delete "${d.name}"?`,
+    'This will permanently delete the day and ALL its matches and drawings.',
+    async()=>{
+      setStatus('DELETING…');
+      try{
+        const{data:ms}=await sb.from('matches').select('id').eq('day_id',did);
+        const mIds=(ms||[]).map(m=>m.id);
+        if(mIds.length){
+          const{data:tms}=await sb.from('teams').select('id').in('match_id',mIds);
+          const tmIds=(tms||[]).map(t=>t.id);
+          if(tmIds.length) await sb.from('shapes').delete().in('team_id',tmIds);
+          await sb.from('teams').delete().in('match_id',mIds);
+          await sb.from('matches').delete().in('id',mIds);
+        }
+        await sb.from('days').delete().eq('id',did);
+        if(t) t.days=t.days.filter(x=>x.id!==did);
+        if(activeDayId===did){activeDayId=null;activeMatchId=null;matches=[];selectedMatch=null;}
+        renderTree();renderDayTabs();renderGrid();renderRP();
+        setStatus('READY');toast('Day deleted','ok');
+      }catch(e){setStatus('ERROR');toast('Delete failed: '+e.message,'err');}
+    },
+    'DELETE DAY'
+  );
+}
+
+// ── [D3] ACTIVE PLAYERS MODAL (post-match-create) ──
+let _idxApmSelectedIds=new Set();
+let _idxApmAllPlayers=[];
+let _idxApmMatchId=null;
+
+async function maybeOpenActivePlayersModal(matchId){
+  _idxApmMatchId=matchId;
+  // Check if tournament has any registered players
+  const{data,error}=await sb.from('tournament_players')
+    .select('player_id, players(id,name,role)')
+    .eq('tournament_id',activeTournamentId)
+    .eq('user_id',currentUser.id);
+  if(error||!data||data.length===0){
+    // No players registered — go straight to editor
+    redirectToEditor(matchId);
+    return;
+  }
+  _idxApmAllPlayers=data.map(r=>({id:r.players?.id||r.player_id,name:r.players?.name||'Unknown',role:r.players?.role||''})).filter(p=>p.name!=='Unknown');
+  _idxApmSelectedIds=new Set();
+  _renderIdxApmPlayers();
+  document.getElementById('idx-apm').classList.add('show');
+}
+
+function _renderIdxApmPlayers(){
+  const container=document.getElementById('idx-apm-players');
+  container.innerHTML='';
+  const confirmBtn=document.getElementById('btn-iapm-confirm');
+  if(!_idxApmAllPlayers.length){
+    container.innerHTML='<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:12px 0;">No players found.</div>';
+    confirmBtn.disabled=true;
+    return;
+  }
+  _idxApmAllPlayers.forEach(p=>{
+    const row=document.createElement('div');
+    const sel=_idxApmSelectedIds.has(p.id);
+    row.className='idx-apm-player'+(sel?' sel':'');
+    row.innerHTML=`<div class="idx-apm-dot"></div><span>${esc(p.name)}</span>${p.role?`<span class="idx-apm-role">${esc(p.role)}</span>`:''}`;
+    row.onclick=()=>{
+      if(_idxApmSelectedIds.has(p.id)){_idxApmSelectedIds.delete(p.id);}
+      else{
+        if(_idxApmSelectedIds.size>=6){toast('Maximum 6 players','warn');return;}
+        _idxApmSelectedIds.add(p.id);
+      }
+      _renderIdxApmPlayers();
+    };
+    container.appendChild(row);
+  });
+  const n=_idxApmSelectedIds.size;
+  document.getElementById('idx-apm-count').textContent=`${n} / 6 SELECTED`;
+  document.getElementById('idx-apm-sub').textContent=n<4?`Select 4–6 active players. (${4-n} more needed)`:`${n} player${n>1?'s':''} selected — ready.`;
+  confirmBtn.disabled=n<4;
+}
+
+async function confirmActivePlayers(){
+  if(_idxApmSelectedIds.size<4)return;
+  document.getElementById('idx-apm').classList.remove('show');
+  if(_idxApmMatchId&&currentUser){
+    const rows=[..._idxApmSelectedIds].map(pid=>({match_id:_idxApmMatchId,player_id:pid,user_id:currentUser.id,kills:0,damage:0}));
+    try{await sb.from('match_players').insert(rows);}catch(e){toast('Squad save failed: '+e.message,'err');}
+  }
+  redirectToEditor(_idxApmMatchId);
+}
+
+function skipActivePlayers(){
+  document.getElementById('idx-apm').classList.remove('show');
+  redirectToEditor(_idxApmMatchId);
+}
+
+function redirectToEditor(matchId){
+  mzCtxWrite({matchId,tournamentId:activeTournamentId,dayId:activeDayId});
+  window.location.href=`editor.html?matchId=${matchId}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+}
+
 // close modal on backdrop
 document.getElementById('new-match-modal').addEventListener('click',function(e){if(e.target===this)closeNewMatchModal();});
 document.getElementById('group-picker-modal').addEventListener('click',function(e){if(e.target===this)closeGroupPicker();});
 </script>
+<!-- [D2] Delete Warning Modal -->
+<div id="idx-delete-modal">
+  <div class="idm-box">
+    <div class="idm-icon">⚠️</div>
+    <div class="idm-title" id="idm-title">Are you sure?</div>
+    <div class="idm-body" id="idm-body">This action cannot be undone.</div>
+    <div class="idm-actions">
+      <button class="btn-idm-cancel" onclick="closeDeleteWarning()">CANCEL</button>
+      <button class="btn-idm-confirm" id="idm-confirm-btn" onclick="_idmConfirm()">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<!-- [D3] Active Players Modal -->
+<div id="idx-apm">
+  <div class="idx-apm-box">
+    <div class="idx-apm-title">👥 Active Squad</div>
+    <div class="idx-apm-sub" id="idx-apm-sub">Select 4–6 players active in this match.</div>
+    <div class="idx-apm-count" id="idx-apm-count">0 / 6 SELECTED</div>
+    <div class="idx-apm-players" id="idx-apm-players"></div>
+    <div class="idx-apm-actions">
+      <button class="btn-iapm-skip" onclick="skipActivePlayers()">SKIP</button>
+      <button class="btn-iapm-confirm" id="btn-iapm-confirm" onclick="confirmActivePlayers()" disabled>CONFIRM SQUAD</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
