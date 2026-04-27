@@ -3349,9 +3349,8 @@ function downloadSnapshot() {
 let semSelectedPlayerId = null;
 
 function markSelfElim() {
-  if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   semSelectedPlayerId = null;
-  document.getElementById('sem-time').textContent = fmtTime(state.time);
+  document.getElementById('sem-time').textContent = state.matchId ? fmtTime(state.time) : '—';
   document.getElementById('sem-finish-count').value = '1';
   document.getElementById('sem-confirm-btn').disabled = true;
   renderSemPlayers();
@@ -3361,7 +3360,13 @@ function markSelfElim() {
 function renderSemPlayers() {
   const container = document.getElementById('sem-player-select');
   container.innerHTML = '';
-  // Alive pool only
+  if(!state.matchId) {
+    const empty = document.createElement('div');
+    empty.className = 'sem-empty';
+    empty.textContent = 'Select a match first.';
+    container.appendChild(empty);
+    return;
+  }
   const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
   if (!alive.length) {
     const empty = document.createElement('div');
@@ -3542,15 +3547,15 @@ function updateSelfButtonState() {
 let slmSelectedPlayerId = null;
 
 function markSelfLoss() {
-  if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   slmSelectedPlayerId = null;
-  document.getElementById('slm-time').textContent = fmtTime(state.time);
+  document.getElementById('slm-time').textContent = state.matchId ? fmtTime(state.time) : '—';
   document.getElementById('btn-slm-confirm').disabled = true;
-  // Populate killed-by dropdown with enemy teams
   const sel = document.getElementById('slm-killedby');
   sel.innerHTML = '<option value="">— None —</option>';
-  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe)
-    .forEach(t=>sel.add(new Option(t.name, t.id)));
+  if(state.matchId) {
+    teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe)
+      .forEach(t=>sel.add(new Option(t.name, t.id)));
+  }
   renderSlmPlayers();
   document.getElementById('self-loss-modal').classList.add('show');
 }
@@ -3558,6 +3563,13 @@ function markSelfLoss() {
 function renderSlmPlayers() {
   const container = document.getElementById('slm-players');
   container.innerHTML = '';
+  if(!state.matchId) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:10px 0;';
+    empty.textContent = 'Select a match first.';
+    container.appendChild(empty);
+    return;
+  }
   const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
   if (!alive.length) {
     const empty = document.createElement('div');
