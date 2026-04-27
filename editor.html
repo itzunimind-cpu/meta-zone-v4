@@ -989,8 +989,13 @@ canvas.path-mode{ cursor:cell; }
       <span class="logo-text">METAZONE</span>
     </div>
     <nav class="header-nav">
-      <a href="#" class="nav-link active">EDITOR</a>
       <a href="index.html" class="nav-link">DASHBOARD</a>
+      <a href="editor.html" class="nav-link active">EDITOR</a>
+      <a href="tournament-create.html" class="nav-link">NEW TOURNAMENT</a>
+      <a href="tournament-editor.html" class="nav-link">TOURNAMENT EDITOR</a>
+      <a href="analytics.html" class="nav-link">TEAM ANALYTICS</a>
+      <a href="player.html" class="nav-link">PLAYER ANALYTICS</a>
+      <a href="history.html" class="nav-link">ALL TOURNAMENTS</a>
     </nav>
   </div>
   <div class="header-right">
@@ -2744,11 +2749,22 @@ async function deleteSelected(type) {
 // ══════════════════════════════════════════════════════
 // URL PARAM AUTO-SELECTION (dashboard → editor deep link)
 // ══════════════════════════════════════════════════════
+// ── SESSIONSTORE CONTEXT ──
+function mzCtxWrite(extra){
+  const ctx={tournamentId:state.tournamentId,dayId:state.dayId,matchId:state.matchId,...(extra||{})};
+  try{sessionStorage.setItem('mz_ctx',JSON.stringify(ctx));}catch(e){}
+}
+function mzCtxRead(){
+  try{return JSON.parse(sessionStorage.getItem('mz_ctx')||'{}');}catch(e){return{};}
+}
+
 async function applyUrlParams() {
   const params = new URLSearchParams(window.location.search);
-  const pTournamentId = params.get('tournamentId');
-  const pDayId        = params.get('dayId');
-  const pMatchId      = params.get('matchId');
+  // URL params take priority; sessionStorage is fallback
+  const ctx = mzCtxRead();
+  const pTournamentId = params.get('tournamentId') || ctx.tournamentId || null;
+  const pDayId        = params.get('dayId')        || ctx.dayId        || null;
+  const pMatchId      = params.get('matchId')      || ctx.matchId      || null;
 
   // [E11] No params — auto-load user's most recent match
   if (!pMatchId && !pDayId && !pTournamentId) {
