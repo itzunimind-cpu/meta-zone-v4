@@ -218,7 +218,6 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
       <span class="logo-text">METAZONE</span>
     </a>
     <nav class="header-nav">
-    <nav class="header-nav">
       <a href="index.html" class="nav-link">DASHBOARD</a>
       <a href="editor.html" class="nav-link">EDITOR</a>
       <a href="tournament-create.html" class="nav-link active">NEW TOURNAMENT</a>
@@ -226,7 +225,6 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
       <a href="analytics.html" class="nav-link">TEAM ANALYTICS</a>
       <a href="player.html" class="nav-link">PLAYER ANALYTICS</a>
       <a href="history.html" class="nav-link">ALL TOURNAMENTS</a>
-    </nav>
     </nav>
   </div>
   <div class="header-right">
@@ -259,7 +257,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
         <div class="step-item" id="step-item-2">
           <div class="step-num">02</div>
           <div>
-            <div class="step-label">Team Structure</div>
+            <div class="step-label">Tournament Format</div>
             <div class="step-underline"></div>
             <div class="step-sub">Pool or Groups</div>
           </div>
@@ -268,7 +266,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
         <div class="step-item" id="step-item-3">
           <div class="step-num">03</div>
           <div>
-            <div class="step-label">Roster Setup</div>
+            <div class="step-label">Opposition Roster</div>
             <div class="step-underline"></div>
             <div class="step-sub">Add Teams</div>
           </div>
@@ -276,6 +274,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 
         <div class="step-item" id="step-item-4">
           <div class="step-num">04</div>
+          <div>
+            <div class="step-label">Squad Registration</div>
+            <div class="step-underline"></div>
+            <div class="step-sub">Your Players</div>
+          </div>
+        </div>
+
+        <div class="step-item" id="step-item-5">
+          <div class="step-num">05</div>
           <div>
             <div class="step-label">Confirm & Deploy</div>
             <div class="step-underline"></div>
@@ -303,17 +310,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 
       <!-- STEP 1: Name -->
       <div id="step-1-panel">
-        <span class="step-eyebrow">Step 01 / 04</span>
+        <span class="step-eyebrow">Step 01 / 05</span>
         <h1 class="step-title">Tournament Name</h1>
         <div class="step-accent-bar"></div>
         <label class="field-label" for="tc-name">Tournament Identifier</label>
         <input id="tc-name" class="field-input" type="text" placeholder="e.g. BGMI Pro Series — Season 4" maxlength="120" />
       </div>
 
-      <!-- STEP 2: Mode -->
+      <!-- STEP 2: Format -->
       <div id="step-2-panel" style="display:none;">
-        <span class="step-eyebrow">Step 02 / 04</span>
-        <h1 class="step-title">Team Structure</h1>
+        <span class="step-eyebrow">Step 02 / 05</span>
+        <h1 class="step-title">Tournament Format</h1>
         <div class="step-accent-bar"></div>
         <label class="field-label">Select Team Organisation Mode</label>
         <div class="mode-grid">
@@ -332,10 +339,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
         </div>
       </div>
 
-      <!-- STEP 3: Roster -->
+      <!-- STEP 3: Opposition Roster -->
       <div id="step-3-panel" style="display:none;">
-        <span class="step-eyebrow">Step 03 / 04</span>
-        <h1 class="step-title">Roster Setup</h1>
+        <span class="step-eyebrow">Step 03 / 05</span>
+        <h1 class="step-title">Opposition Roster</h1>
         <div class="step-accent-bar"></div>
 
         <!-- POOL mode -->
@@ -366,9 +373,56 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 
       </div>
 
-      <!-- STEP 4: Review -->
+      <!-- STEP 4: Squad Registration -->
       <div id="step-4-panel" style="display:none;">
-        <span class="step-eyebrow">Step 04 / 04</span>
+        <span class="step-eyebrow">Step 04 / 05</span>
+        <h1 class="step-title">Squad Registration</h1>
+        <div class="step-accent-bar"></div>
+        <div style="max-width:600px;">
+          <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:32px;line-height:1.7;">
+            Select 4–6 players from your roster to register for this tournament. They will be available in the editor for kill and loss tracking.
+          </p>
+
+          <span class="teams-section-label">Search Players</span>
+          <div class="autocomplete-wrap" id="squad-ac-wrap">
+            <div class="team-add-row">
+              <input id="squad-player-input" class="team-add-input" type="text"
+                placeholder="Search player by name…" autocomplete="off"
+                oninput="onSquadPlayerInput()" onkeydown="onSquadPlayerKeydown(event)" />
+              <button class="team-add-btn" id="squad-add-btn" onclick="addSquadPlayer()" disabled>+ ADD</button>
+            </div>
+            <div id="squad-suggestions" class="suggestions-drop"></div>
+          </div>
+
+          <div id="squad-chips" class="chips-wrap" style="margin-top:16px;"></div>
+          <div id="squad-empty" class="chips-empty" style="margin-top:12px;">No players selected yet. Minimum 4 required.</div>
+          <div id="squad-count" style="margin-top:16px;font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:none;">
+            <span id="squad-count-num">0</span> / 6 PLAYERS SELECTED
+          </div>
+
+          <div class="section-divider"></div>
+          <span class="teams-section-label">Create New Player</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input id="new-player-name" class="team-add-input" type="text"
+              placeholder="Player name…" maxlength="60" style="flex:1;"
+              onkeydown="if(event.key==='Enter')createAndAddPlayer()" />
+            <select id="new-player-role" style="padding:11px 14px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:14px;outline:none;cursor:pointer;min-width:130px;">
+              <option value="">Role (opt.)</option>
+              <option value="IGL">IGL</option>
+              <option value="Entry">Entry</option>
+              <option value="Support">Support</option>
+              <option value="Sniper">Sniper</option>
+              <option value="Flex">Flex</option>
+            </select>
+            <button class="team-add-btn" onclick="createAndAddPlayer()">+ CREATE</button>
+          </div>
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:8px;">Player is saved to your roster and added to this squad.</p>
+        </div>
+      </div>
+
+      <!-- STEP 5: Confirm & Deploy -->
+      <div id="step-5-panel" style="display:none;">
+        <span class="step-eyebrow">Step 05 / 05</span>
         <h1 class="step-title">Confirm & Deploy</h1>
         <div class="step-accent-bar"></div>
         <div id="review-block" style="max-width:600px;"></div>
@@ -385,7 +439,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
       <div class="footer-right">
         <div class="footer-next-hint" id="footer-hint">
           <span class="footer-next-label">Next Step</span>
-          <span class="footer-next-sub" id="footer-next-sub">Team Structure</span>
+          <span class="footer-next-sub" id="footer-next-sub">Tournament Format</span>
         </div>
         <button class="btn-confirm" id="btn-confirm" onclick="goNext()">CONTINUE</button>
       </div>
@@ -417,6 +471,8 @@ let groupIdCounter = 0;
 let suggestionTimer = null;
 let activeSuggestionGroup = null; // for groups mode: group id
 let knownTeams = []; // preloaded team names for instant autocomplete
+let squadPlayers = []; // [{id, name, role}] selected players for this tournament
+let allPlayers = [];  // [{id, name, role}] from players table
 
 // ──────────────────────────────────────────────
 // AUTH
@@ -440,6 +496,7 @@ async function signOut() {
 function resetLocalState() {
   currentUser = null;
   currentStep = 1; teamMode = null; poolTeams = []; groups = [];
+  squadPlayers = []; allPlayers = [];
 }
 
 // ──────────────────────────────────────────────
@@ -466,19 +523,17 @@ function resetLocalState() {
 })();
 
 async function init() {
-  // Preload all known team names for instant autocomplete (no per-keystroke DB calls)
   try {
-    const { data, error } = await sb
-      .from('tournament_teams')
-      .select('team_name')
-      .eq('user_id', currentUser.id);
+    const { data, error } = await sb.from('tournament_teams').select('team_name').eq('user_id', currentUser.id);
     if (!error && data) {
       const seen = new Set();
-      knownTeams = data
-        .map(r => r.team_name)
-        .filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+      knownTeams = data.map(r => r.team_name).filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
     }
-  } catch(e) { /* non-fatal — autocomplete just won't have history */ }
+  } catch(e) {}
+  try {
+    const { data, error } = await sb.from('players').select('id, name, role').eq('user_id', currentUser.id).order('name');
+    if (!error && data) allPlayers = data;
+  } catch(e) {}
   renderStep(1);
 }
 
@@ -486,40 +541,37 @@ async function init() {
 // STEP NAVIGATION
 // ──────────────────────────────────────────────
 const STEP_CONFIG = {
-  1: { eyebrow:'Step 01 / 04', nextLabel:'Team Structure', btnText:'CONTINUE', progress:'25%' },
-  2: { eyebrow:'Step 02 / 04', nextLabel:'Roster Setup', btnText:'CONTINUE', progress:'50%' },
-  3: { eyebrow:'Step 03 / 04', nextLabel:'Review & Confirm', btnText:'CONTINUE', progress:'75%' },
-  4: { eyebrow:'Step 04 / 04', nextLabel:'', btnText:'DEPLOY TOURNAMENT', progress:'100%' },
+  1: { eyebrow:'Step 01 / 05', nextLabel:'Tournament Format', btnText:'CONTINUE', progress:'20%' },
+  2: { eyebrow:'Step 02 / 05', nextLabel:'Opposition Roster', btnText:'CONTINUE', progress:'40%' },
+  3: { eyebrow:'Step 03 / 05', nextLabel:'Squad Registration', btnText:'CONTINUE', progress:'60%' },
+  4: { eyebrow:'Step 04 / 05', nextLabel:'Review & Confirm',  btnText:'CONTINUE', progress:'80%' },
+  5: { eyebrow:'Step 05 / 05', nextLabel:'',                  btnText:'DEPLOY TOURNAMENT', progress:'100%' },
 };
 
 function renderStep(n) {
   currentStep = n;
-  // Show/hide panels
-  [1,2,3,4].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     document.getElementById('step-'+i+'-panel').style.display = (i===n)?'block':'none';
   });
-  // Sidebar state
-  [1,2,3,4].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     const el = document.getElementById('step-item-'+i);
     el.classList.remove('active','done');
     if (i < n) el.classList.add('done');
     else if (i === n) el.classList.add('active');
   });
-  // Progress
   document.getElementById('progress-fill').style.width = STEP_CONFIG[n].progress;
-  // Footer
   const cfg = STEP_CONFIG[n];
   document.getElementById('btn-confirm').textContent = cfg.btnText;
   const hint = document.getElementById('footer-hint');
-  if (n === 4) {
+  if (n === 5) {
     hint.style.display = 'none';
   } else {
     hint.style.display = 'flex';
     document.getElementById('footer-next-sub').textContent = cfg.nextLabel;
   }
-  // Step 3 specific
   if (n === 3) renderStep3();
-  if (n === 4) renderReview();
+  if (n === 4) renderSquadChips();
+  if (n === 5) renderReview();
 }
 
 function goNext() {
@@ -528,10 +580,9 @@ function goNext() {
     if (!name) { toast('Enter a tournament name.', 'err'); return; }
     renderStep(2);
   } else if (currentStep === 2) {
-    if (!teamMode) { toast('Select a team structure mode.', 'err'); return; }
+    if (!teamMode) { toast('Select a tournament format.', 'err'); return; }
     renderStep(3);
   } else if (currentStep === 3) {
-    // Validate
     if (teamMode === 'pool') {
       if (poolTeams.length === 0) { toast('Add at least one team.', 'err'); return; }
     } else {
@@ -541,6 +592,9 @@ function goNext() {
     }
     renderStep(4);
   } else if (currentStep === 4) {
+    if (squadPlayers.length < 4) { toast('Select at least 4 players for your squad.', 'err'); return; }
+    renderStep(5);
+  } else if (currentStep === 5) {
     confirmCreate();
   }
 }
@@ -750,7 +804,103 @@ document.addEventListener('click', (e) => {
 });
 
 // ──────────────────────────────────────────────
-// STEP 4 — Review
+// STEP 4 — Squad Registration
+// ──────────────────────────────────────────────
+function renderSquadChips() {
+  const wrap = document.getElementById('squad-chips');
+  const empty = document.getElementById('squad-empty');
+  const countEl = document.getElementById('squad-count');
+  const countNum = document.getElementById('squad-count-num');
+  wrap.innerHTML = '';
+  squadPlayers.forEach((p, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span>${esc(p.name)}${p.role ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-left:6px;letter-spacing:1px;text-transform:uppercase;">${esc(p.role)}</span>` : ''}</span><button class="chip-remove" onclick="removeSquadPlayer(${i})">×</button>`;
+    wrap.appendChild(chip);
+  });
+  const n = squadPlayers.length;
+  empty.style.display = n ? 'none' : 'block';
+  countEl.style.display = n ? 'block' : 'none';
+  if (countNum) countNum.textContent = n;
+  const addBtn = document.getElementById('squad-add-btn');
+  if (addBtn) addBtn.disabled = (n >= 6);
+}
+
+function removeSquadPlayer(i) {
+  squadPlayers.splice(i, 1);
+  renderSquadChips();
+}
+
+function onSquadPlayerInput() {
+  const val = document.getElementById('squad-player-input').value.trim();
+  const addBtn = document.getElementById('squad-add-btn');
+  if (addBtn) addBtn.disabled = (squadPlayers.length >= 6);
+  if (val.length < 1) { closeSuggestions('squad-suggestions'); return; }
+  const q = val.toLowerCase();
+  const selectedIds = new Set(squadPlayers.map(p => p.id));
+  const matches = allPlayers.filter(p => p.name.toLowerCase().includes(q) && !selectedIds.has(p.id)).slice(0, 8);
+  const drop = document.getElementById('squad-suggestions');
+  if (matches.length === 0) {
+    drop.innerHTML = `<div class="suggestion-empty">No matches — use "Create New Player" below</div>`;
+  } else {
+    drop.innerHTML = matches.map(p =>
+      `<div class="suggestion-item" onmousedown="pickSquadPlayer('${p.id}')">${esc(p.name)}${p.role ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-left:8px;text-transform:uppercase;">${esc(p.role)}</span>` : ''}</div>`
+    ).join('');
+  }
+  drop.classList.add('open');
+}
+
+function onSquadPlayerKeydown(e) {
+  if (e.key === 'Enter') addSquadPlayer();
+  if (e.key === 'Escape') closeSuggestions('squad-suggestions');
+}
+
+function pickSquadPlayer(playerId) {
+  const p = allPlayers.find(p => p.id === playerId);
+  if (!p) return;
+  closeSuggestions('squad-suggestions');
+  document.getElementById('squad-player-input').value = '';
+  if (squadPlayers.length >= 6) { toast('Maximum 6 players allowed.', 'err'); return; }
+  if (squadPlayers.find(sp => sp.id === p.id)) { toast('Player already in squad.', 'err'); return; }
+  squadPlayers.push({ id: p.id, name: p.name, role: p.role || '' });
+  renderSquadChips();
+}
+
+function addSquadPlayer() {
+  const val = document.getElementById('squad-player-input').value.trim();
+  if (!val) return;
+  if (squadPlayers.length >= 6) { toast('Maximum 6 players allowed.', 'err'); return; }
+  const q = val.toLowerCase();
+  const selectedIds = new Set(squadPlayers.map(p => p.id));
+  const match = allPlayers.find(p => p.name.toLowerCase() === q && !selectedIds.has(p.id));
+  if (match) {
+    pickSquadPlayer(match.id);
+  } else {
+    toast('Use autocomplete or create a new player below.', 'err');
+  }
+}
+
+async function createAndAddPlayer() {
+  const nameInput = document.getElementById('new-player-name');
+  const roleInput = document.getElementById('new-player-role');
+  const name = nameInput.value.trim();
+  if (!name) { toast('Enter a player name.', 'err'); return; }
+  if (squadPlayers.length >= 6) { toast('Maximum 6 players allowed.', 'err'); return; }
+  if (allPlayers.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+    toast('Player already exists — search above.', 'err'); return;
+  }
+  const role = roleInput.value;
+  const { data, error } = await sb.from('players').insert({ user_id: currentUser.id, name, role: role || null }).select('id, name, role').single();
+  if (error) { toast('Error creating player: ' + error.message, 'err'); return; }
+  allPlayers.push(data);
+  squadPlayers.push({ id: data.id, name: data.name, role: data.role || '' });
+  nameInput.value = ''; roleInput.value = '';
+  renderSquadChips();
+  toast(`${name} created and added to squad.`, 'ok');
+}
+
+// ──────────────────────────────────────────────
+// STEP 5 — Review
 // ──────────────────────────────────────────────
 function renderReview() {
   const name = document.getElementById('tc-name').value.trim();
@@ -763,7 +913,7 @@ function renderReview() {
       </div>
       <div style="padding:14px 20px;display:flex;gap:32px;">
         <div>
-          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Mode</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Format</div>
           <div style="font-size:14px;font-weight:700;color:var(--accent);text-transform:uppercase;">${teamMode}</div>
         </div>
         <div>
@@ -776,7 +926,7 @@ function renderReview() {
   if (teamMode === 'pool') {
     html += `
       <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;">${poolTeams.length} Teams in Pool</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
         ${poolTeams.map(t => `<div class="chip">${esc(t.name)}</div>`).join('')}
       </div>
     `;
@@ -794,6 +944,18 @@ function renderReview() {
       `;
     });
   }
+  html += `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:8px;">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(34,211,238,.04);">
+        <div style="font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;">
+          Squad <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);font-weight:400;">${squadPlayers.length} PLAYERS</span>
+        </div>
+      </div>
+      <div style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:8px;">
+        ${squadPlayers.map(p => `<div class="chip">${esc(p.name)}${p.role ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-left:6px;text-transform:uppercase;">${esc(p.role)}</span>` : ''}</div>`).join('')}
+      </div>
+    </div>
+  `;
   block.innerHTML = html;
 }
 
@@ -841,6 +1003,14 @@ async function confirmCreate() {
   }
 
   toast('Tournament created! Redirecting…', 'ok');
+
+  // 3. Insert tournament_players (squad)
+  if (squadPlayers.length > 0) {
+    const tpRows = squadPlayers.map(p => ({ tournament_id: tid, player_id: p.id, user_id: uid }));
+    const { error: tpErr } = await sb.from('tournament_players').insert(tpRows);
+    if (tpErr) { handleCreateError(btn, tpErr.message); return; }
+  }
+
   setTimeout(() => { window.location.href = 'index.html?tournamentId=' + tid + '&autostart=1'; }, 900);
 }
 function handleCreateError(btn, msg) {
