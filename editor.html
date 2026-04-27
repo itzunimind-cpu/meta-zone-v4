@@ -174,6 +174,13 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
   cursor:pointer;transition:background .15s;flex-shrink:0;line-height:1;
 }
 .btn-add:hover{ background:rgba(34,211,238,.22); }
+.btn-add-inline{
+  width:100%;margin-top:5px;padding:6px 10px;
+  background:none;border:1px dashed var(--border);border-radius:6px;
+  color:var(--muted);font-family:var(--font-mono);font-size:10px;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;text-align:center;
+}
+.btn-add-inline:hover{ border-color:var(--accent);color:var(--accent); }
 .btn-del{
   background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;
   padding:0 8px;font-family:var(--font-mono);font-size:12px;
@@ -645,6 +652,41 @@ canvas.path-mode{ cursor:cell; }
 }
 .btn-ewm-confirm:hover{ opacity:.85; }
 
+/* ══ UNIFIED WIPE MODAL (C8) ══ */
+#wipe-modal{
+  position:fixed;inset:0;background:rgba(2,6,23,.78);backdrop-filter:blur(5px);
+  z-index:450;display:none;align-items:center;justify-content:center;
+}
+#wipe-modal.show{ display:flex; }
+.wm-box{
+  background:var(--bg-panel);border:1px solid var(--orange);border-radius:10px;
+  padding:22px;width:300px;display:flex;flex-direction:column;gap:12px;
+}
+.wm-title{ font-family:var(--font-display);font-size:16px;font-weight:800;color:var(--text); }
+.wm-sub{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;line-height:1.6; }
+.wm-pos-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+}
+.wm-pos-label{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;flex:1; }
+.wm-pos-input{
+  width:60px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:15px;
+  font-weight:700;text-align:center;outline:none;transition:border-color .2s;
+}
+.wm-pos-input:focus{ border-color:var(--orange); }
+.wm-actions{ display:flex;gap:8px; }
+.btn-wm-cancel{
+  flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;
+}
+.btn-wm-cancel:hover{ border-color:var(--red);color:var(--red); }
+.btn-wm-confirm{
+  flex:1;padding:9px;background:var(--orange);border:none;color:#020617;
+  border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;
+}
+.btn-wm-confirm:hover{ opacity:.85; }
+
 /* Self loss modal */
 /* Editor group picker */
 #editor-group-picker{position:fixed;inset:0;background:rgba(2,6,23,.85);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:500;}
@@ -672,21 +714,33 @@ canvas.path-mode{ cursor:cell; }
 #self-loss-modal.show{ display:flex; }
 .slm-box{
   background:var(--bg-panel);border:1px solid var(--yellow);border-radius:10px;
-  padding:20px;width:280px;display:flex;flex-direction:column;gap:10px;
+  padding:20px;width:320px;display:flex;flex-direction:column;gap:10px;max-height:80vh;
 }
 .slm-title{ font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text); }
-.slm-players{ display:flex;flex-direction:column;gap:6px; }
+.slm-sub{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase; }
+.slm-players{ display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:200px; }
 .slm-player{
-  padding:9px 12px;background:var(--bg-card);border:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;padding:9px 12px;
+  background:var(--bg-card);border:1px solid var(--border);
   border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;
   transition:all .15s;
 }
-.slm-player:hover{ border-color:var(--yellow);color:var(--yellow); }
+.slm-player:hover{ border-color:var(--yellow); }
+.slm-player.selected{ border-color:var(--yellow);background:rgba(250,204,21,.08);color:var(--yellow); }
+.slm-player-dot{ width:7px;height:7px;border-radius:50%;background:var(--yellow);flex-shrink:0; }
+.slm-section-label{ font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase; }
+.slm-actions{ display:flex;gap:8px;margin-top:2px; }
 .btn-slm-cancel{
-  padding:7px;background:none;border:1px solid var(--border);color:var(--muted);
+  flex:1;padding:8px;background:none;border:1px solid var(--border);color:var(--muted);
   border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;
 }
 .btn-slm-cancel:hover{ border-color:var(--red);color:var(--red); }
+.btn-slm-confirm{
+  flex:1;padding:8px;background:var(--yellow);border:none;color:#020617;
+  border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;
+}
+.btn-slm-confirm:hover{ opacity:.85; }
+.btn-slm-confirm:disabled{ opacity:.35;cursor:not-allowed; }
 
 /* ══ SELF ELIM MODAL ══ */
 #self-elim-modal{
@@ -696,11 +750,11 @@ canvas.path-mode{ cursor:cell; }
 #self-elim-modal.show{ display:flex; }
 .sem-box{
   background:var(--bg-panel);border:1px solid var(--accent);border-radius:10px;
-  padding:20px;width:300px;display:flex;flex-direction:column;gap:12px;max-height:70vh;
+  padding:20px;width:320px;display:flex;flex-direction:column;gap:12px;max-height:80vh;
 }
 .sem-title{ font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text); }
 .sem-sub{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em; }
-.sem-players{ display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:240px; }
+.sem-players{ display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:200px; }
 .sem-player{
   display:flex;align-items:center;gap:8px;padding:8px 12px;
   background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
@@ -713,8 +767,17 @@ canvas.path-mode{ cursor:cell; }
   font-family:var(--font-mono);font-size:10px;color:var(--muted);
   text-align:center;padding:12px 0;line-height:1.6;
 }
-.sem-add-row{ display:flex;gap:6px; }
-.sem-add-row .mz-input{ flex:1;margin:0; }
+.sem-finish-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+}
+.sem-finish-label{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;flex:1; }
+.sem-finish-input{
+  width:60px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;color:var(--text);font-family:var(--font-mono);font-size:14px;
+  font-weight:700;text-align:center;outline:none;transition:border-color .2s;
+}
+.sem-finish-input:focus{ border-color:var(--accent); }
 .sem-actions{ display:flex;gap:8px;margin-top:2px; }
 .btn-sem-cancel{
   flex:1;padding:8px;background:none;border:1px solid var(--border);color:var(--muted);
@@ -772,6 +835,56 @@ canvas.path-mode{ cursor:cell; }
   font-size:14px;padding:0 2px;transition:color .15s;flex-shrink:0;line-height:1;
 }
 .btn-map-del:hover{ color:var(--red); }
+
+/* ══ ACTIVE PLAYERS MODAL ══ */
+#active-players-modal{
+  position:fixed;inset:0;background:rgba(2,6,23,.8);backdrop-filter:blur(6px);
+  z-index:500;display:none;align-items:center;justify-content:center;
+}
+#active-players-modal.show{ display:flex; }
+.apm-box{
+  background:var(--bg-panel);border:1px solid var(--accent);border-radius:12px;
+  padding:24px;width:360px;display:flex;flex-direction:column;gap:14px;max-height:80vh;
+}
+.apm-title{ font-family:var(--font-display);font-size:17px;font-weight:800;color:var(--text); }
+.apm-sub{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;line-height:1.6; }
+.apm-count{
+  font-family:var(--font-mono);font-size:10px;color:var(--accent);
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.apm-players{ display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;min-height:0; }
+.apm-player{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:7px;
+  cursor:pointer;transition:all .15s;
+}
+.apm-player:hover{ border-color:rgba(34,211,238,.4); }
+.apm-player.selected{ border-color:var(--accent);background:rgba(34,211,238,.07); }
+.apm-check{
+  width:16px;height:16px;border:2px solid var(--border);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-size:10px;font-weight:700;transition:all .15s;color:#020617;
+}
+.apm-player.selected .apm-check{ background:var(--accent);border-color:var(--accent); }
+.apm-player-name{ flex:1;font-size:13px;font-weight:600;color:var(--text); }
+.apm-player-role{ font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase; }
+.apm-empty{
+  font-family:var(--font-mono);font-size:11px;color:var(--muted);
+  text-align:center;padding:20px 0;line-height:1.7;
+}
+.apm-actions{ display:flex;gap:8px;flex-shrink:0; }
+.btn-apm-skip{
+  flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .15s;letter-spacing:.04em;
+}
+.btn-apm-skip:hover{ border-color:var(--muted);color:var(--text); }
+.btn-apm-confirm{
+  flex:2;padding:9px;background:var(--accent);border:none;color:#020617;
+  border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;
+  cursor:pointer;transition:opacity .15s;
+}
+.btn-apm-confirm:hover{ opacity:.85; }
+.btn-apm-confirm:disabled{ opacity:.35;cursor:not-allowed; }
 
 /* ══ DELETE WARNING MODAL ══ */
 #delete-warning-modal{
@@ -908,12 +1021,9 @@ canvas.path-mode{ cursor:cell; }
       <span class="sb-label">Day</span>
       <div class="sel-del-row">
         <select class="mz-select" id="sel-day"></select>
-        <button class="btn-del" onclick="deleteSelected('day')" title="Delete">✕</button>
+        <button class="btn-del" onclick="deleteSelected('day')" title="Delete day">✕</button>
       </div>
-      <div class="add-row">
-        <input class="mz-input" type="text" id="in-day" placeholder="New day...">
-        <button class="btn-add" onclick="addDay()">+</button>
-      </div>
+      <button class="btn-add-inline" onclick="addDay()">+ ADD DAY</button>
     </div>
 
     <!-- MATCH -->
@@ -921,12 +1031,9 @@ canvas.path-mode{ cursor:cell; }
       <span class="sb-label">Match</span>
       <div class="sel-del-row">
         <select class="mz-select" id="sel-match"></select>
-        <button class="btn-del" onclick="deleteSelected('match')" title="Delete">✕</button>
+        <button class="btn-del" onclick="deleteSelected('match')" title="Delete match">✕</button>
       </div>
-      <div class="add-row">
-        <input class="mz-input" type="text" id="in-match" placeholder="New match...">
-        <button class="btn-add" onclick="addMatch()">+</button>
-      </div>
+      <button class="btn-add-inline" onclick="addMatch()">+ ADD MATCH</button>
     </div>
 
     <!-- MAP -->
@@ -1211,9 +1318,16 @@ canvas.path-mode{ cursor:cell; }
 <div id="self-loss-modal">
   <div class="slm-box">
     <div class="slm-title">💀 Player Loss at <span id="slm-time" style="color:var(--yellow);font-family:var(--font-mono)">00:00</span></div>
-    <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">SELECT PLAYER WHO DIED</div>
+    <div class="slm-sub">Which player did we lose?</div>
     <div class="slm-players" id="slm-players"></div>
-    <button class="btn-slm-cancel" onclick="closeSelfLossModal()">CANCEL</button>
+    <div class="slm-section-label" style="margin-top:2px;">Killed by (optional)</div>
+    <select class="mz-select" id="slm-killedby" style="font-size:12px;">
+      <option value="">— None —</option>
+    </select>
+    <div class="slm-actions">
+      <button class="btn-slm-cancel" onclick="closeSelfLossModal()">CANCEL</button>
+      <button class="btn-slm-confirm" id="btn-slm-confirm" onclick="confirmSelfLoss()" disabled>CONFIRM LOSS</button>
+    </div>
   </div>
 </div>
 
@@ -1223,9 +1337,9 @@ canvas.path-mode{ cursor:cell; }
     <div class="sem-title">⚡ Self Elim — <span id="sem-time" style="color:var(--accent);font-family:var(--font-mono)">00:00</span></div>
     <div class="sem-sub">WHICH PLAYER SECURED THE KILL?</div>
     <div class="sem-players" id="sem-player-select"></div>
-    <div class="sem-add-row">
-      <input class="mz-input" type="text" id="sem-add-input" placeholder="Add player name..." autocomplete="off" maxlength="30">
-      <button class="btn-add" onclick="semAddPlayer()">+</button>
+    <div class="sem-finish-row">
+      <span class="sem-finish-label">Number of finishes</span>
+      <input class="sem-finish-input" type="number" id="sem-finish-count" min="1" max="99" value="1">
     </div>
     <div class="sem-actions">
       <button class="btn-sem-cancel" onclick="closeSelfElimModal()">CANCEL</button>
@@ -1244,6 +1358,36 @@ canvas.path-mode{ cursor:cell; }
     <div class="anm-actions">
       <button class="btn-anm-cancel" onclick="closeAnnotationModal()">CANCEL</button>
       <button class="btn-anm-save" onclick="saveAnnotation()">SAVE NOTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WIPE MODAL (C8) ████████████████████ -->
+<div id="wipe-modal">
+  <div class="wm-box">
+    <div class="wm-title" id="wm-title">⚑ Team Eliminated</div>
+    <div class="wm-sub" id="wm-sub">Confirm wipe and set placement position.</div>
+    <div class="wm-pos-row">
+      <span class="wm-pos-label">Placement position</span>
+      <input class="wm-pos-input" type="number" id="wm-position" min="1" max="25" value="1">
+    </div>
+    <div class="wm-actions">
+      <button class="btn-wm-cancel" onclick="closeWipeModal()">CANCEL</button>
+      <button class="btn-wm-confirm" onclick="confirmWipe()">CONFIRM WIPE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACTIVE PLAYERS MODAL ████████████████████ -->
+<div id="active-players-modal">
+  <div class="apm-box">
+    <div class="apm-title">👥 Active Squad</div>
+    <div class="apm-sub" id="apm-sub">Select 4–6 players who are active in this match. They will be tracked for kills, losses and wipes.</div>
+    <div class="apm-count" id="apm-count">0 / 6 SELECTED</div>
+    <div class="apm-players" id="apm-players"></div>
+    <div class="apm-actions">
+      <button class="btn-apm-skip" onclick="closeActivePlayersModal()">SKIP</button>
+      <button class="btn-apm-confirm" id="btn-apm-confirm" onclick="confirmActivePlayers()" disabled>CONFIRM SQUAD</button>
     </div>
   </div>
 </div>
@@ -1496,6 +1640,116 @@ async function loadMatchPlayers(matchId) {
       time_of_loss: r.time_of_loss ?? null,
     }));
   } catch(e) { matchPlayers=[]; }
+}
+
+// ══════════════════════════════════════════════════════
+// ACTIVE PLAYERS MODAL (C3)
+// ══════════════════════════════════════════════════════
+let _apmSelectedIds = new Set(); // player_id → selected
+let _apmAllPlayers  = [];        // [{id, name, role}] from tournament_players
+
+async function openActivePlayersModal(matchId) {
+  if(!sb||!matchId||!state.tournamentId||!currentUser) return;
+  _apmSelectedIds = new Set();
+  _apmAllPlayers  = [];
+
+  // Load tournament_players for this tournament
+  try {
+    const {data,error} = await sb
+      .from('tournament_players')
+      .select('player_id, players(id, name, role)')
+      .eq('tournament_id', state.tournamentId)
+      .eq('user_id', currentUser.id);
+    if(!error && data) {
+      _apmAllPlayers = data
+        .map(r => ({ id: r.players?.id || r.player_id, name: r.players?.name || 'Unknown', role: r.players?.role || '' }))
+        .filter(p => p.name !== 'Unknown');
+    }
+  } catch(e) { /* non-fatal */ }
+
+  _renderApmPlayers();
+  document.getElementById('active-players-modal').classList.add('show');
+}
+
+function _renderApmPlayers() {
+  const container = document.getElementById('apm-players');
+  const countEl   = document.getElementById('apm-count');
+  const confirmBtn = document.getElementById('btn-apm-confirm');
+  container.innerHTML = '';
+
+  if(!_apmAllPlayers.length) {
+    container.innerHTML = '<div class="apm-empty">No players registered for this tournament.<br>Add players via Squad Registration in the wizard.</div>';
+    confirmBtn.disabled = true;
+    countEl.textContent = '0 / 6 SELECTED';
+    return;
+  }
+
+  _apmAllPlayers.forEach(p => {
+    const row = document.createElement('div');
+    const sel = _apmSelectedIds.has(p.id);
+    row.className = 'apm-player' + (sel ? ' selected' : '');
+    row.innerHTML = `
+      <div class="apm-check">${sel ? '✓' : ''}</div>
+      <span class="apm-player-name">${esc(p.name)}</span>
+      ${p.role ? `<span class="apm-player-role">${esc(p.role)}</span>` : ''}
+    `;
+    row.onclick = () => {
+      if(_apmSelectedIds.has(p.id)) {
+        _apmSelectedIds.delete(p.id);
+      } else {
+        if(_apmSelectedIds.size >= 6) { toast('Maximum 6 players allowed.', 'warn'); return; }
+        _apmSelectedIds.add(p.id);
+      }
+      _renderApmPlayers();
+    };
+    container.appendChild(row);
+  });
+
+  const n = _apmSelectedIds.size;
+  countEl.textContent = `${n} / 6 SELECTED`;
+  confirmBtn.disabled = n < 4;
+  // Update sub-text
+  if(n < 4) {
+    document.getElementById('apm-sub').textContent = `Select 4–6 players who are active in this match. (${4-n} more needed)`;
+  } else {
+    document.getElementById('apm-sub').textContent = `${n} player${n>1?'s':''} selected. Ready to confirm.`;
+  }
+}
+
+async function confirmActivePlayers() {
+  if(_apmSelectedIds.size < 4) { toast('Select at least 4 players.', 'warn'); return; }
+  closeActivePlayersModal();
+
+  if(!sb||!state.matchId||!currentUser) return;
+  try {
+    const rows = [..._apmSelectedIds].map(pid => ({
+      match_id:   state.matchId,
+      player_id:  pid,
+      user_id:    currentUser.id,
+      kills:      0,
+      damage:     0,
+    }));
+    const {data, error} = await sb.from('match_players').insert(rows).select('id, player_id, kills, damage, time_of_loss, players(name)');
+    if(error) throw error;
+    if(data) {
+      matchPlayers = data.map(r=>({
+        id: r.id,
+        player_id: r.player_id,
+        name: r.players?.name || 'Unknown',
+        kills: r.kills||0,
+        damage: r.damage||0,
+        time_of_loss: null,
+      }));
+    }
+    toast(`Squad registered: ${matchPlayers.length} players`, 'ok');
+  } catch(e) {
+    toast('Squad save failed: ' + e.message, 'err');
+  }
+}
+
+function closeActivePlayersModal() {
+  document.getElementById('active-players-modal').classList.remove('show');
+  _apmSelectedIds = new Set();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2214,17 +2468,15 @@ document.getElementById('pp-label').onkeydown=e=>{
 // DB MANAGEMENT
 // ══════════════════════════════════════════════════════
 async function addDay() {
-  const input=document.getElementById('in-day');
-  const name=input.value.trim();
-  if(!name){ toast('ENTER A DAY NAME','warn'); return; }
   if(!state.tournamentId){ toast('SELECT TOURNAMENT FIRST','warn'); return; }
-  input.value='';
-  const orderIdx=days.filter(d=>d.tournament_id===state.tournamentId).length;
+  const existing = days.filter(d=>d.tournament_id===state.tournamentId);
+  const orderIdx = existing.length;
+  const name = 'Day ' + String(orderIdx + 1).padStart(2,'0');
   if(sb&&currentUser){
     setSyncState('syncing');
     const {data,error}=await sb.from('days').insert({name,tournament_id:state.tournamentId,user_id:currentUser.id,order_index:orderIdx}).select().single();
-    if(error){ setSyncState('error'); toast('DAY ERROR: '+error.message,'err'); console.error(error); return; }
-    days.push(data); state.dayId=data.id; setSyncState('saved'); toast('Day added: '+name,'ok');
+    if(error){ setSyncState('error'); toast('DAY ERROR: '+error.message,'err'); return; }
+    days.push(data); state.dayId=data.id; setSyncState('saved'); toast('Added: '+name,'ok');
   } else {
     const fake={id:'local_'+Date.now(),name,tournament_id:state.tournamentId}; days.push(fake); state.dayId=fake.id;
   }
@@ -2233,12 +2485,10 @@ async function addDay() {
 }
 
 async function addMatch() {
-  const input=document.getElementById('in-match');
-  const name=input.value.trim();
-  if(!name){ toast('ENTER A MATCH NAME','warn'); return; }
   if(!state.dayId){ toast('SELECT DAY FIRST','warn'); return; }
   if(!state.tournamentId){ toast('SELECT TOURNAMENT FIRST','warn'); return; }
-  input.value='';
+  const existing = matches.filter(m=>m.day_id===state.dayId);
+  const name = 'Match ' + String(existing.length + 1).padStart(2,'0');
   if(sb&&currentUser){
     setSyncState('syncing');
     const {data,error}=await sb.from('matches').insert({name,day_id:state.dayId,map_key:state.mapKey,user_id:currentUser.id}).select().single();
@@ -2270,6 +2520,9 @@ async function addMatch() {
   overlayState={};
   refreshDropdowns(); renderTeamList(); draw();
   updateRightPanel(); await loadAnnotations(state.matchId);
+  setMapDisplayMode(true);
+  // [C3 Scenario 3] Open active players popup after inline match creation
+  if(sb && state.matchId && state.tournamentId) openActivePlayersModal(state.matchId);
 }
 
 // ── [M1] Pool populate for editor ──
@@ -2388,69 +2641,92 @@ async function deleteSelected(type) {
   if(type==='tournament'){
     if(!state.tournamentId) return;
     const t=tournaments.find(x=>x.id===state.tournamentId);
-    if(!t||!confirm(`Delete tournament "${t.name}" and ALL its data?`)) return;
-    if(sb&&!String(t.id).startsWith('local_')){
-      const dIds=days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
-      const mIds=matches.filter(m=>dIds.includes(m.day_id)).map(m=>m.id);
-      const tIds=teams.filter(tm=>mIds.includes(tm.match_id)).map(tm=>tm.id);
-      if(tIds.length) await sb.from('shapes').delete().in('team_id',tIds);
-      if(tIds.length) await sb.from('teams').delete().in('id',tIds);
-      if(mIds.length) await sb.from('matches').delete().in('id',mIds);
-      if(dIds.length) await sb.from('days').delete().in('id',dIds);
-      const {error}=await sb.from('tournaments').delete().eq('id',t.id);
-      if(error){ toast('DELETE ERROR: '+error.message,'err'); return; }
-    }
-    const dIds2=days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
-    const mIds2=matches.filter(m=>dIds2.includes(m.day_id)).map(m=>m.id);
-    tournaments=tournaments.filter(x=>x.id!==t.id);
-    days=days.filter(d=>d.tournament_id!==t.id);
-    matches=matches.filter(m=>!dIds2.includes(m.day_id));
-    teams=teams.filter(tm=>!mIds2.includes(tm.match_id));
-    shapesCache={}; zonesCache={}; state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
+    if(!t) return;
+    showDeleteWarning('delete',
+      `Delete "${t.name}"?`,
+      'This will permanently delete the tournament and ALL its days, matches and drawings.',
+      async ()=>{
+        if(sb&&!String(t.id).startsWith('local_')){
+          const dIds=days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
+          const mIds=matches.filter(m=>dIds.includes(m.day_id)).map(m=>m.id);
+          const tIds=teams.filter(tm=>mIds.includes(tm.match_id)).map(tm=>tm.id);
+          if(tIds.length) await sb.from('shapes').delete().in('team_id',tIds);
+          if(tIds.length) await sb.from('teams').delete().in('id',tIds);
+          if(mIds.length) await sb.from('matches').delete().in('id',mIds);
+          if(dIds.length) await sb.from('days').delete().in('id',dIds);
+          const {error}=await sb.from('tournaments').delete().eq('id',t.id);
+          if(error){ toast('DELETE ERROR: '+error.message,'err'); return; }
+        }
+        const dIds2=days.filter(d=>d.tournament_id===t.id).map(d=>d.id);
+        const mIds2=matches.filter(m=>dIds2.includes(m.day_id)).map(m=>m.id);
+        tournaments=tournaments.filter(x=>x.id!==t.id);
+        days=days.filter(d=>d.tournament_id!==t.id);
+        matches=matches.filter(m=>!dIds2.includes(m.day_id));
+        teams=teams.filter(tm=>!mIds2.includes(tm.match_id));
+        shapesCache={}; zonesCache={}; state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
+        overlayState={}; annotations=[];
+        refreshDropdowns(); renderTeamList(); draw(); updateRightPanel(); setMapDisplayMode(false);
+        toast('Tournament deleted','ok');
+      }, 'DELETE TOURNAMENT');
+
   } else if(type==='day'){
     if(!state.dayId) return;
     const d=days.find(x=>x.id===state.dayId);
-    if(!d||!confirm(`Delete day "${d.name}" and ALL its matches?`)) return;
-    if(sb&&!String(d.id).startsWith('local_')){
-      const mIds=matches.filter(m=>m.day_id===d.id).map(m=>m.id);
-      const tIds=teams.filter(tm=>mIds.includes(tm.match_id)).map(tm=>tm.id);
-      if(tIds.length) await sb.from('shapes').delete().in('team_id',tIds);
-      if(tIds.length) await sb.from('teams').delete().in('id',tIds);
-      if(mIds.length) await sb.from('matches').delete().in('id',mIds);
-      const {error}=await sb.from('days').delete().eq('id',d.id);
-      if(error){ toast('DELETE ERROR: '+error.message,'err'); return; }
-    }
-    const mIds2=matches.filter(m=>m.day_id===d.id).map(m=>m.id);
-    days=days.filter(x=>x.id!==d.id);
-    matches=matches.filter(m=>m.day_id!==d.id);
-    teams=teams.filter(tm=>!mIds2.includes(tm.match_id));
-    shapesCache={}; zonesCache={}; state.dayId=null; state.matchId=null; state.activeTeamId=null;
-    if(sb&&state.tournamentId){
-      const {data}=await sb.from('days').select('*').eq('tournament_id',state.tournamentId).order('order_index');
-      if(data){ days=days.filter(d2=>d2.tournament_id!==state.tournamentId); days.push(...data); }
-    }
+    if(!d) return;
+    showDeleteWarning('delete',
+      `Delete "${d.name}"?`,
+      'This will permanently delete the day and ALL its matches and drawings.',
+      async ()=>{
+        if(sb&&!String(d.id).startsWith('local_')){
+          const mIds=matches.filter(m=>m.day_id===d.id).map(m=>m.id);
+          const tIds=teams.filter(tm=>mIds.includes(tm.match_id)).map(tm=>tm.id);
+          if(tIds.length) await sb.from('shapes').delete().in('team_id',tIds);
+          if(tIds.length) await sb.from('teams').delete().in('id',tIds);
+          if(mIds.length) await sb.from('matches').delete().in('id',mIds);
+          const {error}=await sb.from('days').delete().eq('id',d.id);
+          if(error){ toast('DELETE ERROR: '+error.message,'err'); return; }
+        }
+        const mIds2=matches.filter(m=>m.day_id===d.id).map(m=>m.id);
+        days=days.filter(x=>x.id!==d.id);
+        matches=matches.filter(m=>m.day_id!==d.id);
+        teams=teams.filter(tm=>!mIds2.includes(tm.match_id));
+        shapesCache={}; zonesCache={}; state.dayId=null; state.matchId=null; state.activeTeamId=null;
+        if(sb&&state.tournamentId){
+          const {data}=await sb.from('days').select('*').eq('tournament_id',state.tournamentId).order('order_index');
+          if(data){ days=days.filter(d2=>d2.tournament_id!==state.tournamentId); days.push(...data); }
+        }
+        overlayState={}; annotations=[];
+        refreshDropdowns(); renderTeamList(); draw(); updateRightPanel(); setMapDisplayMode(false);
+        toast('Day deleted','ok');
+      }, 'DELETE DAY');
+
   } else if(type==='match'){
     if(!state.matchId) return;
     const m=matches.find(x=>x.id===state.matchId);
-    if(!m||!confirm(`Delete match "${m.name}" and all its drawings?`)) return;
-    if(sb&&!String(m.id).startsWith('local_')){
-      const tIds=teams.filter(t=>t.match_id===m.id).map(t=>t.id);
-      if(tIds.length) await sb.from('shapes').delete().in('team_id',tIds);
-      if(tIds.length) await sb.from('teams').delete().in('id',tIds);
-      const {error}=await sb.from('matches').delete().eq('id',m.id);
-      if(error){ toast('DELETE ERROR: '+error.message,'err'); return; }
-    }
-    teams=teams.filter(t=>t.match_id!==m.id);
-    matches=matches.filter(x=>x.id!==m.id);
-    shapesCache={}; zonesCache={}; state.matchId=null; state.activeTeamId=null;
-    if(sb&&state.dayId){
-      const {data}=await sb.from('matches').select('*').eq('day_id',state.dayId).order('created_at');
-      if(data){ matches=matches.filter(m2=>m2.day_id!==state.dayId); matches.push(...data); }
-    }
+    if(!m) return;
+    showDeleteWarning('delete',
+      `Delete "${m.name}"?`,
+      'This will permanently delete the match and all its drawings.',
+      async ()=>{
+        if(sb&&!String(m.id).startsWith('local_')){
+          const tIds=teams.filter(t=>t.match_id===m.id).map(t=>t.id);
+          if(tIds.length) await sb.from('shapes').delete().in('team_id',tIds);
+          if(tIds.length) await sb.from('teams').delete().in('id',tIds);
+          const {error}=await sb.from('matches').delete().eq('id',m.id);
+          if(error){ toast('DELETE ERROR: '+error.message,'err'); return; }
+        }
+        teams=teams.filter(t=>t.match_id!==m.id);
+        matches=matches.filter(x=>x.id!==m.id);
+        shapesCache={}; zonesCache={}; state.matchId=null; state.activeTeamId=null;
+        if(sb&&state.dayId){
+          const {data}=await sb.from('matches').select('*').eq('day_id',state.dayId).order('created_at');
+          if(data){ matches=matches.filter(m2=>m2.day_id!==state.dayId); matches.push(...data); }
+        }
+        overlayState={}; annotations=[];
+        refreshDropdowns(); renderTeamList(); draw(); updateRightPanel(); setMapDisplayMode(false);
+        toast('Match deleted','ok');
+      }, 'DELETE MATCH');
   }
-  overlayState={}; annotations=[];
-  refreshDropdowns(); renderTeamList(); draw(); updateRightPanel();
-  toast('Deleted','ok');
 }
 
 // ══════════════════════════════════════════════════════
@@ -2525,6 +2801,10 @@ async function _activateMatch(match, statusMsg) {
   annotations = [];
   await loadAnnotations(state.matchId);
   await loadMatchPlayers(state.matchId);
+  // [C3] If no players registered for this match yet → prompt to select squad
+  if(matchPlayers.length === 0 && state.tournamentId) {
+    openActivePlayersModal(state.matchId);
+  }
   // [FIX] Preload known teams for autocomplete
   if (state.tournamentId) await preloadKnownTeams(state.tournamentId);
 
@@ -2598,9 +2878,7 @@ document.getElementById('sel-match').onchange=async function(){
   renderTimelineTicks();
 };
 
-document.getElementById('in-day').onkeydown=e=>{ if(e.key==='Enter') addDay(); };
-document.getElementById('in-match').onkeydown     =e=>{ if(e.key==='Enter') addMatch(); };
-document.getElementById('in-team').onkeydown      =e=>{
+document.getElementById('in-team').onkeydown=e=>{
   if(e.key==='Enter'){ closeTeamSuggestions(); addTeam(); }
   if(e.key==='Escape') closeTeamSuggestions();
 };
@@ -2902,11 +3180,16 @@ function redo() {
 
 async function clearTeam() {
   const shapes=getActiveShapes();
-  if(!shapes||!confirm('Clear all drawings for this team?')) return;
-  const ids=shapes.filter(s=>s.id&&!String(s.id).startsWith('local_')).map(s=>s.id);
-  shapes.length=0;
-  if(sb&&ids.length) await sb.from('shapes').delete().in('id',ids);
-  draw(); renderTimelineTicks(); toast('Team cleared','ok');
+  if(!shapes||!shapes.length) return;
+  showDeleteWarning('delete',
+    'Clear team drawings?',
+    'This will remove all shapes for the active team in this match.',
+    async ()=>{
+      const ids=shapes.filter(s=>s.id&&!String(s.id).startsWith('local_')).map(s=>s.id);
+      shapes.length=0;
+      if(sb&&ids.length) await sb.from('shapes').delete().in('id',ids);
+      draw(); renderTimelineTicks(); toast('Team cleared','ok');
+    }, 'CLEAR');
 }
 
 function exportJSON() {
@@ -2947,7 +3230,7 @@ function markSelfElim() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   semSelectedPlayerId = null;
   document.getElementById('sem-time').textContent = fmtTime(state.time);
-  document.getElementById('sem-add-input').value = '';
+  document.getElementById('sem-finish-count').value = '1';
   document.getElementById('sem-confirm-btn').disabled = true;
   renderSemPlayers();
   document.getElementById('self-elim-modal').classList.add('show');
@@ -2956,21 +3239,21 @@ function markSelfElim() {
 function renderSemPlayers() {
   const container = document.getElementById('sem-player-select');
   container.innerHTML = '';
-  // Alive = time_of_loss is null OR time_of_loss > current T
+  // Alive pool only
   const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
   if (!alive.length) {
     const empty = document.createElement('div');
     empty.className = 'sem-empty';
     empty.textContent = matchPlayers.length
       ? 'No alive players at this time.'
-      : 'No players added yet.\nType a name below to add one.';
+      : 'No players registered — use Active Squad first.';
     container.appendChild(empty);
     return;
   }
   alive.forEach(p => {
     const row = document.createElement('div');
     row.className = 'sem-player' + (p.id === semSelectedPlayerId ? ' selected' : '');
-    row.innerHTML = `<div class="sem-player-dot"></div><span>${p.name}</span>`;
+    row.innerHTML = `<div class="sem-player-dot"></div><span>${esc(p.name)}</span>`;
     row.onclick = () => {
       semSelectedPlayerId = p.id;
       document.getElementById('sem-confirm-btn').disabled = false;
@@ -2980,32 +3263,14 @@ function renderSemPlayers() {
   });
 }
 
-async function semAddPlayer() {
-  const input = document.getElementById('sem-add-input');
-  const name = input.value.trim();
-  if (!name) { toast('ENTER A PLAYER NAME','warn'); return; }
-  input.value = '';
-  if (!sb || !currentUser || !state.matchId) return;
-  try {
-    // Upsert into players table, then link to match_players
-    const { data: pData, error: pErr } = await sb.from('players')
-      .insert({ name, user_id: currentUser.id }).select().single();
-    if (pErr) throw pErr;
-    const { data: mpData, error: mpErr } = await sb.from('match_players')
-      .insert({ match_id: state.matchId, player_id: pData.id, user_id: currentUser.id }).select().single();
-    if (mpErr) throw mpErr;
-    matchPlayers.push({ id: mpData.id, player_id: pData.id, name, kills: 0, damage: 0, time_of_loss: null });
-    renderSemPlayers();
-    toast(`${name} added`,'ok');
-  } catch(e) { toast('ERROR: '+e.message,'err'); }
-}
-
 async function confirmSelfElim() {
   if (!semSelectedPlayerId) return;
   const player = matchPlayers.find(p => p.id === semSelectedPlayerId);
   if (!player) return;
+  const finishes = Math.max(1, parseInt(document.getElementById('sem-finish-count').value, 10) || 1);
   closeSelfElimModal();
-  // Save to self_elims
+
+  // Save to self_elims with finish_count
   if (sb && currentUser && !String(state.matchId).startsWith('local_')) {
     try {
       await sb.from('self_elims').insert({
@@ -3013,23 +3278,25 @@ async function confirmSelfElim() {
         player_id: player.player_id,
         user_id: currentUser.id,
         time_seconds: state.time,
+        finish_count: finishes,
       });
-      // Increment kills on match_players
-      player.kills = (player.kills||0) + 1;
+      // Increment kills on match_players by finish_count
+      player.kills = (player.kills||0) + finishes;
       await sb.from('match_players').update({ kills: player.kills }).eq('id', player.id);
     } catch(e) { toast('SAVE ERROR: '+e.message,'err'); }
   }
+
   // Log entry
-  const logEntry = {
+  annotations.push({
     time_seconds: state.time,
     title: `${player.name} secured elim @ ${fmtTime(state.time)}`,
     body: '',
     _ephemeral: true,
+    _finishes: finishes,
     id: 'local_elim_'+Date.now(),
-  };
-  annotations.push(logEntry);
+  });
   renderAnnotationLog({scrollToTop:true});
-  toast(`⚡ ${player.name} secured elim @ ${fmtTime(state.time)}`,'ok');
+  toast(`⚡ ${player.name} — ${finishes} finish${finishes!==1?'es':''} @ ${fmtTime(state.time)}`,'ok');
 }
 
 function closeSelfElimModal() {
@@ -3037,39 +3304,91 @@ function closeSelfElimModal() {
   semSelectedPlayerId = null;
 }
 
-document.getElementById('sem-add-input').onkeydown = e => {
-  if (e.key === 'Enter') semAddPlayer();
-  if (e.key === 'Escape') closeSelfElimModal();
-};
+// ══ [C8] UNIFIED WIPE MODAL ══════════════════════════
+let _wipePendingTeamId = null;
+let _wipeIsSelf = false;
+
+function _calcWipePosition() {
+  // position = total teams - number of teams already wiped (including this one = N+1th wipe)
+  const matchTeams = teams.filter(t=>t.match_id===state.matchId);
+  const wipedSoFar = matchTeams.filter(t=>t.time_of_wipe!=null).length;
+  return Math.max(1, matchTeams.length - wipedSoFar);
+}
+
+function openWipeModal(teamId, isSelf) {
+  _wipePendingTeamId = teamId;
+  _wipeIsSelf = isSelf;
+  const team = teams.find(t=>t.id===teamId);
+  const pos = _calcWipePosition();
+  document.getElementById('wm-title').textContent = isSelf ? '☠ SELF WIPED' : `⚑ ${team?.name||'Team'} Eliminated`;
+  document.getElementById('wm-sub').textContent = `At ${fmtTime(state.time)} — confirm placement position (auto-calculated, editable).`;
+  document.getElementById('wm-position').value = pos;
+  document.getElementById('wipe-modal').classList.add('show');
+}
+
+function closeWipeModal() {
+  document.getElementById('wipe-modal').classList.remove('show');
+  _wipePendingTeamId = null;
+}
+
+async function confirmWipe() {
+  if(!_wipePendingTeamId) return;
+  const team = teams.find(t=>t.id===_wipePendingTeamId);
+  if(!team) return;
+  const pos = parseInt(document.getElementById('wm-position').value,10)||null;
+  closeWipeModal();
+
+  team.time_of_wipe = state.time;
+  team.confirmed_position = pos;
+  if(sb && !String(team.id).startsWith('local_')){
+    const upd = { time_of_wipe: state.time };
+    if(pos) upd.confirmed_position = pos;
+    await sb.from('teams').update(upd).eq('id', team.id);
+  }
+  const posLabel = pos ? ` — #${pos}` : '';
+  toast(`${_wipeIsSelf?'☠ SELF':'⚑ '+team.name} wiped at ${fmtTime(state.time)}${posLabel}`, 'ok');
+  renderTimelineTicks(); renderAnnotationLog({scrollToTop:true}); updateSelfButtonState();
+}
 
 function markSelfWipe() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   const selfTeam=teams.find(t=>t.match_id===state.matchId&&t.is_self);
   if(!selfTeam){ toast('NO SELF TEAM FOUND','warn'); return; }
-  // E8: Toggle off if clicking at the same wipe time
-  if(selfTeam.time_of_wipe!==null&&selfTeam.time_of_wipe!==undefined){
-    if(selfTeam.time_of_wipe===state.time){
-      selfTeam.time_of_wipe=null;
-      if(sb&&!String(selfTeam.id).startsWith('local_')){
-        sb.from('teams').update({time_of_wipe:null}).eq('id',selfTeam.id);
-      }
-      toast('☠ Self wipe removed','ok');
-      renderTimelineTicks(); renderAnnotationLog(); updateSelfButtonState(); return;
+  // Toggle off if already wiped at this exact time
+  if(selfTeam.time_of_wipe!=null && selfTeam.time_of_wipe===state.time){
+    selfTeam.time_of_wipe=null; selfTeam.confirmed_position=null;
+    if(sb&&!String(selfTeam.id).startsWith('local_')){
+      sb.from('teams').update({time_of_wipe:null,confirmed_position:null}).eq('id',selfTeam.id);
     }
+    toast('☠ Self wipe removed','ok');
+    renderTimelineTicks(); renderAnnotationLog(); updateSelfButtonState(); return;
   }
-  selfTeam.time_of_wipe=state.time;
-  if(sb&&!String(selfTeam.id).startsWith('local_')){
-    sb.from('teams').update({time_of_wipe:state.time}).eq('id',selfTeam.id);
-  }
-  toast(`☠ SELF WIPE recorded at ${fmtTime(state.time)}`,'ok');
-  renderTimelineTicks(); renderAnnotationLog({scrollToTop:true}); updateSelfButtonState();
+  openWipeModal(selfTeam.id, true);
 }
+
+function markEnemyWipe() {
+  if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
+  // Show enemy team picker first, then wipe modal
+  document.getElementById('ewm-time').textContent=fmtTime(state.time);
+  const sel=document.getElementById('ewm-team-select');
+  sel.innerHTML='<option value="">— select team —</option>';
+  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe).forEach(t=>{ sel.add(new Option(t.name,t.id)); });
+  if(sel.options.length===1){ toast('ALL ENEMY TEAMS ALREADY WIPED','warn'); return; }
+  document.getElementById('enemy-wipe-modal').classList.add('show');
+}
+
+async function confirmEnemyWipe() {
+  const teamId=document.getElementById('ewm-team-select').value;
+  if(!teamId){ toast('SELECT A TEAM','warn'); return; }
+  closeEnemyWipeModal();
+  openWipeModal(teamId, false);
+}
+function closeEnemyWipeModal(){ document.getElementById('enemy-wipe-modal').classList.remove('show'); }
 
 // E8: Disable/re-enable self-action buttons based on wipe state
 function updateSelfButtonState() {
   const selfTeam=state.matchId ? teams.find(t=>t.match_id===state.matchId&&t.is_self) : null;
   const wiped=selfTeam?.time_of_wipe!=null && state.time>=selfTeam.time_of_wipe;
-  // Find self-action buttons by their onclick attributes
   document.querySelectorAll('[onclick*="markSelfElim"],[onclick*="markSelfLoss"]').forEach(btn=>{
     btn.disabled=wiped;
     btn.style.opacity=wiped?'0.35':'';
@@ -3078,10 +3397,19 @@ function updateSelfButtonState() {
   });
 }
 
-// ══ [E6] SELF LOSS MODAL ══════════════════════════════
+// ══ [C6] SELF LOSS MODAL ══════════════════════════════
+let slmSelectedPlayerId = null;
+
 function markSelfLoss() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
+  slmSelectedPlayerId = null;
   document.getElementById('slm-time').textContent = fmtTime(state.time);
+  document.getElementById('btn-slm-confirm').disabled = true;
+  // Populate killed-by dropdown with enemy teams
+  const sel = document.getElementById('slm-killedby');
+  sel.innerHTML = '<option value="">— None —</option>';
+  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe)
+    .forEach(t=>sel.add(new Option(t.name, t.id)));
   renderSlmPlayers();
   document.getElementById('self-loss-modal').classList.add('show');
 }
@@ -3089,33 +3417,45 @@ function markSelfLoss() {
 function renderSlmPlayers() {
   const container = document.getElementById('slm-players');
   container.innerHTML = '';
-  // [E6] Only show alive players at current T
   const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
   if (!alive.length) {
     const empty = document.createElement('div');
-    empty.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:8px 0;';
-    empty.textContent = matchPlayers.length ? 'No alive players at this time.' : 'No players yet — add via ⚡ Self Elim first.';
+    empty.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:10px 0;';
+    empty.textContent = matchPlayers.length ? 'No alive players at this time.' : 'No players registered — use Active Squad first.';
     container.appendChild(empty);
     return;
   }
   alive.forEach(p => {
     const row = document.createElement('div');
-    row.className = 'slm-player';
-    row.textContent = p.name;
-    row.onclick = () => confirmSelfLoss(p);
+    const sel = p.id === slmSelectedPlayerId;
+    row.className = 'slm-player' + (sel ? ' selected' : '');
+    row.innerHTML = `<div class="slm-player-dot"></div><span>${esc(p.name)}</span>`;
+    row.onclick = () => {
+      slmSelectedPlayerId = p.id;
+      document.getElementById('btn-slm-confirm').disabled = false;
+      renderSlmPlayers();
+    };
     container.appendChild(row);
   });
 }
 
-async function confirmSelfLoss(player) {
+async function confirmSelfLoss() {
+  if(!slmSelectedPlayerId) return;
+  const player = matchPlayers.find(p => p.id === slmSelectedPlayerId);
+  if(!player) return;
+  const killedByTeamId = document.getElementById('slm-killedby').value || null;
   closeSelfLossModal();
-  // Save time_of_loss to match_players
+
+  // Update pool — mark time_of_loss
   player.time_of_loss = state.time;
-  if (sb && !String(player.id).startsWith('local_')) {
+  if(sb && !String(player.id).startsWith('local_')) {
     try {
-      await sb.from('match_players').update({ time_of_loss: state.time }).eq('id', player.id);
+      const upd = { time_of_loss: state.time };
+      if(killedByTeamId) upd.killed_by_team_id = killedByTeamId;
+      await sb.from('match_players').update(upd).eq('id', player.id);
     } catch(e) { toast('SAVE ERROR: '+e.message,'err'); }
   }
+
   // Log entry
   annotations.push({
     time_seconds: state.time,
@@ -3125,77 +3465,78 @@ async function confirmSelfLoss(player) {
     id: 'local_loss_'+Date.now(),
   });
   renderAnnotationLog({scrollToTop:true});
-  toast(`💀 ${player.name} down at ${fmtTime(state.time)}`,'ok');
-  // [E6] If last alive player → auto-trigger Self Wipe
+  const killedByTeam = killedByTeamId ? teams.find(t=>t.id===killedByTeamId) : null;
+  toast(`💀 ${player.name} down${killedByTeam ? ` — killed by ${killedByTeam.name}` : ''}`, 'ok');
+
+  // If last alive player → auto-trigger Self Wipe
   const stillAlive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
-  if (stillAlive.length === 0) {
+  if(stillAlive.length === 0) {
     toast('☠ Last player down — triggering Self Wipe','warn');
     setTimeout(markSelfWipe, 300);
   }
 }
 
-function closeSelfLossModal(){ document.getElementById('self-loss-modal').classList.remove('show'); }
-
-function markEnemyWipe() {
-  if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
-  document.getElementById('ewm-time').textContent=fmtTime(state.time);
-  const sel=document.getElementById('ewm-team-select');
-  sel.innerHTML='<option value="">— select team —</option>';
-  // E7: Only show teams not already wiped (time_of_wipe is null/undefined)
-  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe).forEach(t=>{ sel.add(new Option(t.name,t.id)); });
-  if(sel.options.length===1){ toast('ALL ENEMY TEAMS ALREADY WIPED','warn'); return; }
-  document.getElementById('enemy-wipe-modal').classList.add('show');
+function closeSelfLossModal() {
+  document.getElementById('self-loss-modal').classList.remove('show');
+  slmSelectedPlayerId = null;
 }
-
-async function confirmEnemyWipe() {
-  const teamId=document.getElementById('ewm-team-select').value;
-  if(!teamId){ toast('SELECT A TEAM','warn'); return; }
-  const team=teams.find(t=>t.id===teamId); if(!team) return;
-  team.time_of_wipe=state.time;
-  if(sb&&!String(teamId).startsWith('local_')){
-    await sb.from('teams').update({time_of_wipe:state.time}).eq('id',teamId);
-  }
-  closeEnemyWipeModal();
-  toast(`⚑ ${team.name} wiped at ${fmtTime(state.time)}`,'ok');
-  renderTimelineTicks();
-}
-function closeEnemyWipeModal(){ document.getElementById('enemy-wipe-modal').classList.remove('show'); }
 
 async function markMatchEnd() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   const dur=state.time;
-  // Save duration to DB
   if(sb&&!String(state.matchId).startsWith('local_')){
     await sb.from('matches').update({duration_seconds:dur}).eq('id',state.matchId);
     const m=matches.find(x=>x.id===state.matchId); if(m) m.duration_seconds=dur;
   }
   document.getElementById('match-meta-duration').textContent=fmtTime(dur);
   toast(`⏹ Match ended at ${fmtTime(dur)}`,'ok');
-  showResultsPanel();
+  await showResultsPanel();
 }
 
 // ══════════════════════════════════════════════════════
-// RESULTS PANEL
+// RESULTS PANEL (C9 — pre-filled from tracked events)
 // ══════════════════════════════════════════════════════
-function showResultsPanel() {
+async function showResultsPanel() {
   const matchTeams=teams.filter(t=>t.match_id===state.matchId);
   const body=document.getElementById('results-body');
   body.innerHTML='';
 
-  // Section: All teams — placement + kills
-  const title=document.createElement('div'); title.className='results-section-title'; title.textContent='Team Results — Placement & Kills';
+  // Pre-compute total kills from self_elims for SELF team
+  let selfElimKills = {};
+  if(sb && state.matchId && !String(state.matchId).startsWith('local_')) {
+    try {
+      const {data} = await sb.from('self_elims')
+        .select('player_id, finish_count')
+        .eq('match_id', state.matchId);
+      (data||[]).forEach(r=>{ selfElimKills[r.player_id] = (selfElimKills[r.player_id]||0) + (r.finish_count||1); });
+    } catch(e) { /* non-fatal */ }
+  }
+  // Fallback: use matchPlayers.kills sum
+  const totalSelfKills = Object.values(selfElimKills).reduce((a,b)=>a+b,0) ||
+    matchPlayers.reduce((a,p)=>a+(p.kills||0),0);
+
+  // Section header
+  const title=document.createElement('div'); title.className='results-section-title'; title.textContent='Match Results — Placement & Kills';
   body.appendChild(title);
 
   matchTeams.forEach(team=>{
     const row=document.createElement('div'); row.className='results-team-row';
     const dot=document.createElement('div'); dot.className='results-team-dot'; dot.style.background=team.color;
-    const name=document.createElement('div'); name.className='results-team-name'; name.textContent=team.name;
+    const name=document.createElement('div'); name.className='results-team-name';
+    name.textContent=team.is_self ? '⚡ SELF' : team.name;
+
+    // Pre-fill placement from confirmed_position (C8) if available, else existing placement
+    const prefillPlace = team.confirmed_position || team.placement || '';
+    // Pre-fill kills: SELF = sum of self_elims finish_count; others = team.kills
+    const prefillKills = team.is_self ? totalSelfKills : (team.kills||0);
+
     // Placement input
     const plLabel=document.createElement('div'); plLabel.className='results-input-label'; plLabel.textContent='PLACE';
-    const plInput=document.createElement('input'); plInput.className='results-input'; plInput.type='number'; plInput.min=1; plInput.max=25; plInput.placeholder='—'; plInput.value=team.placement||''; plInput.dataset.teamId=team.id; plInput.dataset.field='placement';
+    const plInput=document.createElement('input'); plInput.className='results-input'; plInput.type='number'; plInput.min=1; plInput.max=25; plInput.placeholder='—'; plInput.value=prefillPlace; plInput.dataset.teamId=team.id; plInput.dataset.field='placement';
     // Kills input
     const kLabel=document.createElement('div'); kLabel.className='results-input-label'; kLabel.textContent='KILLS';
-    const kInput=document.createElement('input'); kInput.className='results-input'; kInput.type='number'; kInput.min=0; kInput.max=99; kInput.placeholder='0'; kInput.value=team.kills||0; kInput.dataset.teamId=team.id; kInput.dataset.field='kills';
+    const kInput=document.createElement('input'); kInput.className='results-input'; kInput.type='number'; kInput.min=0; kInput.max=99; kInput.placeholder='0'; kInput.value=prefillKills; kInput.dataset.teamId=team.id; kInput.dataset.field='kills';
+
     const plWrap=document.createElement('div'); plWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;'; plWrap.appendChild(plLabel); plWrap.appendChild(plInput);
     const kWrap=document.createElement('div');  kWrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';  kWrap.appendChild(kLabel);  kWrap.appendChild(kInput);
     row.appendChild(dot); row.appendChild(name); row.appendChild(plWrap); row.appendChild(kWrap);
@@ -3272,52 +3613,98 @@ function renderAnnotationLog(opts) {
   const filterSel=document.getElementById('mt-log-filter');
   const logTeamFilter=filterSel?.value||'ALL';
 
-  // Combine annotations + shape events for the log
+  // Combine all event types for the log
   const events=[];
 
-  // Real annotations (not filtered by team — always show all notes)
+  // ── Real annotations / notes (not team-filtered) ──
   annotations.forEach(a=>{
+    if(a._ephemeral) return; // ephemeral ones handled below as typed events
     events.push({ time:a.time_seconds, type:'note', title:a.title, body:a.body, icon:'📝', iconClass:'note', teamId:null });
   });
 
-  // Determine which teams to show in log
+  // ── Self Loss events (ephemeral annotations with id prefix local_loss_) ──
+  annotations.filter(a=>a._ephemeral && a.id && String(a.id).startsWith('local_loss_')).forEach(a=>{
+    // title stored as "[name] lost @ ..." — extract name
+    const name = a.title.replace(/ lost @ .+$/,'');
+    events.push({ time:a.time_seconds, type:'loss', title:`Lost — ${name}`, icon:'💀', iconClass:'wipe', teamId:null });
+  });
+
+  // ── Self Elim events (ephemeral annotations with id prefix local_elim_) ──
+  annotations.filter(a=>a._ephemeral && a.id && String(a.id).startsWith('local_elim_')).forEach(a=>{
+    // title stored as "[name] secured elim @ ..."
+    const name = a.title.replace(/ secured elim @ .+$/,'');
+    const finishes = a._finishes || 1;
+    events.push({ time:a.time_seconds, type:'elim', title:`${name} — ${finishes} finish${finishes!==1?'es':''}`, icon:'⚡', iconClass:'fight', teamId:null });
+  });
+
+  // ── Determine which teams to show in log ──
   const matchTeams=teams.filter(t=>t.match_id===state.matchId);
   const logTeams = state.multiTrackActive && state.multiTrackTeams.length
     ? matchTeams.filter(t=>state.multiTrackTeams.includes(t.id))
     : matchTeams.filter(t=>{ const isActive=t.id===state.activeTeamId; const ov=overlayState[t.id]; return isActive||ov?.visible; });
 
-  // Zone circles — match-level, always shown regardless of team filter
+  // ── Zone circles — match-level, always shown ──
   (zonesCache[state.matchId]||[]).forEach(s=>{
     events.push({ time:s.time||0, type:'circle', title:`Zone ${s.zone_phase||''}`, icon:'⭕', iconClass:'zone', teamId:null });
   });
 
+  // ── Pre-compute wipe positions (sorted by time → highest position = wiped latest) ──
+  const allWipedTeams = matchTeams
+    .filter(t=>t.time_of_wipe!=null)
+    .sort((a,b)=>a.time_of_wipe-b.time_of_wipe);
+  const totalTeams = matchTeams.length;
+  // position[teamId] = rank from bottom (wiped first → highest number)
+  const wipePositions = {};
+  allWipedTeams.forEach((t,i)=>{
+    wipePositions[t.id] = totalTeams - i;
+  });
+
+  // ── Shape events per team ──
   logTeams.forEach(team=>{
-    // [E9] Team filter
     if(logTeamFilter!=='ALL' && team.id!==logTeamFilter) return;
 
+    // Compute per-team rotation counter (lines + paths tagged rotation, in order)
+    let rotIdx = 0;
+
     (shapesCache[team.id]||[]).forEach(s=>{
-      if(s.type==='circle'||s.type==='path') return; // circles handled above; paths show as Rotation N (C11)
+      if(s.type==='circle') return; // handled via zonesCache
       let icon,iconClass,title;
-      if(s.type==='fight'){ icon='⚔'; iconClass='fight'; title=`${s.teamA||'?'} vs ${s.teamB||'?'}`; }
-      else if(s.type==='pin'){  icon='📍'; iconClass='pin';   title=s.label||'Pin'; }
-      else if(s.type==='line'){ icon='→';  iconClass='zone';  title=`Rotation — ${team.name}`; }
-      else return;
+
+      if(s.type==='line' && s.tag==='rotation'){
+        rotIdx++;
+        icon='→'; iconClass='zone'; title=`${team.name} — Rotation ${rotIdx}`;
+      } else if(s.type==='path' && s.tag==='rotation'){
+        rotIdx++;
+        icon='↝'; iconClass='zone'; title=`${team.name} — Rotation ${rotIdx}`;
+      } else if(s.type==='fight'){
+        icon='⚔'; iconClass='fight'; title=`${team.name} — Fight: ${s.teamA||'?'} vs ${s.teamB||'?'}`;
+      } else if(s.type==='pin'){
+        icon='📍'; iconClass='pin'; title=`${team.name} — Pin: ${s.label||'—'}`;
+      } else {
+        return;
+      }
       events.push({ time:s.time||0, type:s.type, title, icon, iconClass, teamId:team.id, teamColor:team.color });
     });
-    // Wipe events
-    if(team.time_of_wipe){
-      events.push({ time:team.time_of_wipe, type:'wipe', title:`${team.name} WIPED`, icon:team.is_self?'☠':'⚑', iconClass:'wipe', teamId:team.id, teamColor:team.color });
+
+    // ── Wipe events with position ──
+    if(team.time_of_wipe!=null){
+      const pos = wipePositions[team.id];
+      const posLabel = pos ? ` — #${pos}` : '';
+      if(team.is_self){
+        events.push({ time:team.time_of_wipe, type:'wipe', title:`SELF wiped${posLabel}`, icon:'☠', iconClass:'wipe', teamId:team.id, teamColor:team.color });
+      } else {
+        events.push({ time:team.time_of_wipe, type:'wipe', title:`${team.name} wiped${posLabel}`, icon:'⚑', iconClass:'wipe', teamId:team.id, teamColor:team.color });
+      }
     }
   });
 
-  // Sort oldest→newest, then reverse so newest is at TOP, T=0 at BOTTOM
+  // ── Sort oldest→newest, reverse so newest is at TOP ──
   events.sort((a,b)=>a.time-b.time);
 
   if(!events.length){
     const empty=document.createElement('div'); empty.style.cssText='font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:20px;'; empty.textContent='NO EVENTS YET'; container.appendChild(empty); return;
   }
 
-  // Reverse: newest at top
   const reversed=[...events].reverse();
 
   let lastLitEl=null;
@@ -3344,14 +3731,8 @@ function renderAnnotationLog(opts) {
     if(isLit) lastLitEl=entry;
   });
 
-  // Auto-scroll: new entry added → scroll to top
-  if(opts?.scrollToTop){
-    container.scrollTop=0;
-  }
-  // Scrub sync: scroll so boundary entry (last lit) is visible near top
-  else if(opts?.scrubSync && lastLitEl){
-    lastLitEl.scrollIntoView({block:'nearest'});
-  }
+  if(opts?.scrollToTop) container.scrollTop=0;
+  else if(opts?.scrubSync && lastLitEl) lastLitEl.scrollIntoView({block:'nearest'});
 }
 
 // ══════════════════════════════════════════════════════
