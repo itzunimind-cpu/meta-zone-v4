@@ -258,7 +258,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
     <nav class="header-nav">
       <a href="index.html" class="nav-link">DASHBOARD</a>
       <a href="editor.html" class="nav-link">EDITOR</a>
-      <a href="#" class="nav-link active">TOURNAMENT</a>
+      <a href="tournament-create.html" class="nav-link">NEW TOURNAMENT</a>
+      <a href="tournament-editor.html" class="nav-link active">TOURNAMENT EDITOR</a>
+      <a href="analytics.html" class="nav-link">TEAM ANALYTICS</a>
+      <a href="player.html" class="nav-link">PLAYER ANALYTICS</a>
+      <a href="history.html" class="nav-link">ALL TOURNAMENTS</a>
+    </nav>
     </nav>
   </div>
   <div class="header-right">
@@ -355,10 +360,6 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
       </table>
     </div>
     <div class="sp-footer">
-      <button onclick="goAnalytics()" style="width:100%;padding:10px;margin-bottom:8px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.3);border-radius:8px;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;" onmouseover="this.style.background='rgba(34,211,238,0.15)'" onmouseout="this.style.background='rgba(34,211,238,0.08)'">
-        <iconify-icon icon="lucide:bar-chart-2"></iconify-icon>
-        VIEW ANALYTICS
-      </button>
       <button class="btn-export-img" onclick="exportStandingsImage()">
         <iconify-icon icon="lucide:image-down"></iconify-icon>
         SAVE AS IMAGE
@@ -408,13 +409,17 @@ let selfTeamName = 'SELF';
 // ══════════════════════════════════════════════════════
 (async function init() {
   const params = new URLSearchParams(location.search);
-  tournamentId = params.get('tournamentId');
+  let ctx = {};
+  try { ctx = JSON.parse(sessionStorage.getItem('mz_ctx') || '{}'); } catch(e) {}
+  tournamentId = params.get('tournamentId') || ctx.tournamentId || null;
   if (!tournamentId) {
     showLoading(false);
-    toast('No tournament ID in URL. Redirecting…', 'err');
+    toast('No tournament ID. Redirecting…', 'err');
     setTimeout(() => location.href = 'index.html', 1500);
     return;
   }
+  // Write back so other pages can read
+  try { sessionStorage.setItem('mz_ctx', JSON.stringify({...ctx, tournamentId})); } catch(e) {}
 
   sb = supabase.createClient(SUPA_URL, SUPA_KEY);
   const { data: { session } } = await sb.auth.getSession();
@@ -850,15 +855,6 @@ function renderStandings() {
     `;
     tbody.appendChild(tr);
   });
-}
-
-// ══════════════════════════════════════════════════════
-// ANALYTICS NAVIGATION
-// ══════════════════════════════════════════════════════
-function goAnalytics() {
-  const tId = new URLSearchParams(window.location.search).get('tournamentId');
-  if (tId) window.location.href = 'analytics.html?tournamentId=' + tId;
-  else toast('No tournament loaded', 'warn');
 }
 
 // ══════════════════════════════════════════════════════
