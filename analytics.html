@@ -284,9 +284,13 @@
         <span class="font-display" style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--text);">METAZONE</span>
       </a>
       <nav style="display:flex;gap:24px;align-items:center;height:56px;">
-        <a href="index.html" class="nav-link">Dashboard</a>
-        <a href="tournament-editor.html" class="nav-link">Tournament</a>
-        <a href="#" class="nav-link active" style="padding-bottom:22px;">Analytics</a>
+        <a href="index.html" class="nav-link">DASHBOARD</a>
+        <a href="editor.html" class="nav-link">EDITOR</a>
+        <a href="tournament-create.html" class="nav-link">NEW TOURNAMENT</a>
+        <a href="tournament-editor.html" class="nav-link">TOURNAMENT EDITOR</a>
+        <a href="analytics.html" class="nav-link active" style="padding-bottom:22px;">TEAM ANALYTICS</a>
+        <a href="player.html" class="nav-link">PLAYER ANALYTICS</a>
+        <a href="history.html" class="nav-link">ALL TOURNAMENTS</a>
       </nav>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
@@ -642,9 +646,11 @@ let _booted = false;
 })();
 
 async function boot() {
-  // Parse URL
+  // Parse URL — sessionStorage fallback
   const params = new URLSearchParams(window.location.search);
-  tournamentId = params.get('tournamentId');
+  let ctx = {};
+  try { ctx = JSON.parse(sessionStorage.getItem('mz_ctx') || '{}'); } catch(e) {}
+  tournamentId = params.get('tournamentId') || ctx.tournamentId || null;
 
   document.getElementById('app').style.display = 'flex';
   document.getElementById('app').style.flexDirection = 'column';
@@ -653,6 +659,9 @@ async function boot() {
     document.getElementById('empty-state').style.display = 'flex';
     return;
   }
+
+  // Write context for other pages
+  try { sessionStorage.setItem('mz_ctx', JSON.stringify({...ctx, tournamentId})); } catch(e) {}
 
   await loadAllData();
 }
