@@ -759,6 +759,45 @@ canvas.path-mode{ cursor:cell; }
 }
 .btn-anm-save:hover{ opacity:.85; }
 
+/* ══ MAP DISPLAY (post-match, read-only) ══ */
+.map-display-row{
+  display:flex;align-items:center;gap:6px;padding:7px 10px;
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--text);
+}
+.map-display-name{ flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.map-display-icon{ font-size:13px;flex-shrink:0; }
+.btn-map-del{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  font-size:14px;padding:0 2px;transition:color .15s;flex-shrink:0;line-height:1;
+}
+.btn-map-del:hover{ color:var(--red); }
+
+/* ══ DELETE WARNING MODAL ══ */
+#delete-warning-modal{
+  position:fixed;inset:0;background:rgba(2,6,23,.75);backdrop-filter:blur(4px);
+  z-index:600;display:none;align-items:center;justify-content:center;
+}
+#delete-warning-modal.show{ display:flex; }
+.dwm-box{
+  background:var(--bg-panel);border:1px solid var(--red);border-radius:10px;
+  padding:24px;width:320px;display:flex;flex-direction:column;gap:14px;
+}
+.dwm-icon{ font-size:28px;text-align:center; }
+.dwm-title{ font-family:var(--font-display);font-size:17px;font-weight:800;color:var(--text);text-align:center; }
+.dwm-body{ font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:center;line-height:1.6;letter-spacing:.03em; }
+.dwm-actions{ display:flex;gap:8px; }
+.btn-dwm-cancel{
+  flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;
+}
+.btn-dwm-cancel:hover{ border-color:var(--muted);color:var(--text); }
+.btn-dwm-confirm{
+  flex:1;padding:9px;background:var(--red);border:none;color:#fff;
+  border-radius:6px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;
+}
+.btn-dwm-confirm:hover{ opacity:.85; }
+
 /* ══ MULTI-TRACK [E9] ══ */
 .btn-multi-track{
   width:100%;padding:8px 12px;background:var(--bg);color:var(--muted);
@@ -893,6 +932,7 @@ canvas.path-mode{ cursor:cell; }
     <!-- MAP -->
     <div class="sb-section">
       <span class="sb-label">Map</span>
+      <!-- Pre-match: dropdown to pick map -->
       <select class="mz-select" id="sel-map" onchange="selectMapFromDropdown(this.value)">
         <option value="erangel">🌿 Erangel</option>
         <option value="miramar">🏜️ Miramar</option>
@@ -900,6 +940,12 @@ canvas.path-mode{ cursor:cell; }
         <option value="sanhok">🌴 Sanhok</option>
         <option value="custom">📂 Custom...</option>
       </select>
+      <!-- Post-match: read-only name + delete -->
+      <div class="map-display-row" id="map-display-row" style="display:none;">
+        <span class="map-display-icon" id="map-display-icon">🌿</span>
+        <span class="map-display-name" id="map-display-name">Erangel</span>
+        <button class="btn-map-del" title="Clear map" onclick="showDeleteWarning('map','Clear map?','This will remove the map from this match. The match data is kept.', clearMatchMap)">🗑</button>
+      </div>
       <input type="file" id="file-map" accept="image/*" style="display:none">
     </div>
 
@@ -1198,6 +1244,19 @@ canvas.path-mode{ cursor:cell; }
     <div class="anm-actions">
       <button class="btn-anm-cancel" onclick="closeAnnotationModal()">CANCEL</button>
       <button class="btn-anm-save" onclick="saveAnnotation()">SAVE NOTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DELETE WARNING MODAL ████████████████████ -->
+<div id="delete-warning-modal">
+  <div class="dwm-box">
+    <div class="dwm-icon" id="dwm-icon">⚠️</div>
+    <div class="dwm-title" id="dwm-title">Are you sure?</div>
+    <div class="dwm-body" id="dwm-body">This action cannot be undone.</div>
+    <div class="dwm-actions">
+      <button class="btn-dwm-cancel" onclick="closeDeleteWarning()">CANCEL</button>
+      <button class="btn-dwm-confirm" id="dwm-confirm-btn" onclick="_dwmConfirm()">DELETE</button>
     </div>
   </div>
 </div>
@@ -1548,6 +1607,12 @@ function loadMapKey(key) {
   state.mapKey=key;
   localStorage.setItem('mz_map',key);
   document.getElementById('match-meta-map').textContent = key.charAt(0).toUpperCase()+key.slice(1);
+  // Refresh display row if visible
+  const dispEl = document.getElementById('map-display-row');
+  if(dispEl && dispEl.style.display!=='none') {
+    document.getElementById('map-display-name').textContent = key.charAt(0).toUpperCase()+key.slice(1);
+    document.getElementById('map-display-icon').textContent = (MAP_ICONS||{})[key]||'🗺️';
+  }
 }
 
 function selectMapFromDropdown(key) {
@@ -1572,6 +1637,53 @@ document.getElementById('file-map').onchange=e=>{
 async function updateMatchMap(key) {
   if(!sb||!state.matchId) return;
   await sb.from('matches').update({map_key:key}).eq('id',state.matchId);
+}
+
+// ── Map display mode toggle ──────────────────
+const MAP_ICONS = { erangel:'🌿', miramar:'🏜️', rondo:'🌅', sanhok:'🌴', custom:'📂' };
+function setMapDisplayMode(hasMatch) {
+  const selEl  = document.getElementById('sel-map');
+  const dispEl = document.getElementById('map-display-row');
+  if(hasMatch) {
+    selEl.style.display  = 'none';
+    dispEl.style.display = 'flex';
+    const key = state.mapKey || 'erangel';
+    const name = key.charAt(0).toUpperCase() + key.slice(1);
+    document.getElementById('map-display-name').textContent = name;
+    document.getElementById('map-display-icon').textContent = MAP_ICONS[key] || '🗺️';
+  } else {
+    selEl.style.display  = '';
+    dispEl.style.display = 'none';
+  }
+}
+
+async function clearMatchMap() {
+  state.mapKey = 'erangel';
+  mapImg = new Image(); WORLD_W=2048; WORLD_H=2048; draw();
+  if(sb && state.matchId) await sb.from('matches').update({map_key:null}).eq('id',state.matchId);
+  setMapDisplayMode(false);
+  document.getElementById('sel-map').value = 'erangel';
+  toast('Map cleared','ok');
+}
+
+// ── Delete warning modal ─────────────────────
+let _dwmCallback = null;
+function showDeleteWarning(type, title, body, onConfirm, confirmLabel) {
+  _dwmCallback = onConfirm;
+  document.getElementById('dwm-title').textContent = title;
+  document.getElementById('dwm-body').textContent  = body;
+  const btn = document.getElementById('dwm-confirm-btn');
+  btn.textContent = confirmLabel || 'DELETE';
+  btn.style.background = type === 'map' ? 'var(--orange)' : 'var(--red)';
+  document.getElementById('delete-warning-modal').classList.add('show');
+}
+function closeDeleteWarning() {
+  document.getElementById('delete-warning-modal').classList.remove('show');
+  _dwmCallback = null;
+}
+function _dwmConfirm() {
+  closeDeleteWarning();
+  if(typeof _dwmCallback === 'function') _dwmCallback();
 }
 
 loadMapKey('erangel');
@@ -2394,6 +2506,8 @@ async function _activateMatch(match, statusMsg) {
     if (mapSel) mapSel.value = match.map_key;
     loadMapKey(match.map_key);
   }
+  // Switch map section to display mode (name + delete, no dropdown)
+  setMapDisplayMode(true);
 
   // Set active team to SELF or first team
   const matchTeams = teams.filter(t => t.match_id === match.id);
@@ -2449,6 +2563,7 @@ document.getElementById('sel-tournament').onchange=async function(){
     knownTeams=[];
   }
   refreshDropdowns(); renderTeamList(); draw(); updateRightPanel(); annotations=[]; renderAnnotationLog();
+  setMapDisplayMode(false);
 };
 document.getElementById('sel-day').onchange=async function(){
   state.dayId=this.value||null; state.matchId=null; state.activeTeamId=null;
@@ -2458,12 +2573,14 @@ document.getElementById('sel-day').onchange=async function(){
     if(!error){ matches=matches.filter(m=>m.day_id!==state.dayId); matches.push(...data); }
   }
   refreshDropdowns(); renderTeamList(); draw(); updateRightPanel(); annotations=[]; renderAnnotationLog();
+  setMapDisplayMode(false);
 };
 document.getElementById('sel-match').onchange=async function(){
   state.matchId=this.value||null; state.activeTeamId=null; overlayState={};
   if(state.matchId){
     const m=matches.find(x=>x.id===state.matchId);
     if(m?.map_key){ state.mapKey=m.map_key; document.getElementById('sel-map').value=m.map_key; loadMapKey(m.map_key); }
+    setMapDisplayMode(true);
     const firstTeam=teams.find(t=>t.match_id===state.matchId);
     state.activeTeamId=firstTeam?.id||null;
     if(sb&&state.matchId) await loadShapesForMatch(state.matchId);
@@ -2472,6 +2589,8 @@ document.getElementById('sel-match').onchange=async function(){
       const slider=document.getElementById('temporal-slider');
       slider.max=Math.max(m.duration_seconds+60, 2100);
     }
+  } else {
+    setMapDisplayMode(false);
   }
   renderTeamList(); draw(); updateRightPanel();
   await loadAnnotations(state.matchId);
