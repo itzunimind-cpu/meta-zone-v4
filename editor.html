@@ -1280,6 +1280,12 @@ canvas.path-mode{ cursor:cell; }
         <span class="rp-field-label">Competing Factions</span>
         <div class="factions-wrap" id="competing-factions"></div>
       </div>
+      <button onclick="if(state.matchId)openActivePlayersModal(state.matchId);else toast('Select a match first','warn');"
+        style="margin-top:10px;width:100%;padding:8px;background:none;border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        👥 ACTIVE SQUAD
+      </button>
     </div>
 
     <!-- Multi-Track [E9] -->
@@ -1741,7 +1747,11 @@ function _renderApmPlayers() {
   container.innerHTML = '';
 
   if(!_apmAllPlayers.length) {
-    container.innerHTML = '<div class="apm-empty">No players registered for this tournament.<br>Add players via Squad Registration in the wizard.</div>';
+    container.innerHTML = `<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:16px 0;line-height:1.8;">
+      No players registered for this tournament.<br>
+      <span style="color:var(--accent);">Add players via Squad Registration</span><br>
+      in the tournament wizard.
+    </div>`;
     confirmBtn.disabled = true;
     countEl.textContent = '0 / 6 SELECTED';
     return;
@@ -3356,9 +3366,11 @@ function renderSemPlayers() {
   if (!alive.length) {
     const empty = document.createElement('div');
     empty.className = 'sem-empty';
-    empty.textContent = matchPlayers.length
-      ? 'No alive players at this time.'
-      : 'No players registered — use Active Squad first.';
+    if(matchPlayers.length === 0) {
+      empty.innerHTML = 'No active squad registered.<br><span style="color:var(--accent);cursor:pointer;" onclick="closeSelfElimModal();openActivePlayersModal(state.matchId)">→ Register Active Squad</span>';
+    } else {
+      empty.textContent = 'No alive players at this time.';
+    }
     container.appendChild(empty);
     return;
   }
@@ -3480,12 +3492,18 @@ function markSelfWipe() {
 
 function markEnemyWipe() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
-  // Show enemy team picker first, then wipe modal
   document.getElementById('ewm-time').textContent=fmtTime(state.time);
   const sel=document.getElementById('ewm-team-select');
   sel.innerHTML='<option value="">— select team —</option>';
-  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe).forEach(t=>{ sel.add(new Option(t.name,t.id)); });
-  if(sel.options.length===1){ toast('ALL ENEMY TEAMS ALREADY WIPED','warn'); return; }
+  // Show non-wiped teams AND teams wiped at current time (for undo)
+  teams.filter(t=>t.match_id===state.matchId&&!t.is_self).forEach(t=>{
+    const isWipedNow = t.time_of_wipe===state.time;
+    const isWipedOther = t.time_of_wipe!=null && t.time_of_wipe!==state.time;
+    if(isWipedOther) return; // already wiped at a different time — skip
+    const label = isWipedNow ? `↩ ${t.name} (undo wipe)` : t.name;
+    sel.add(new Option(label, t.id));
+  });
+  if(sel.options.length===1){ toast('ALL ENEMY TEAMS WIPED — seek to a wipe time to undo','warn'); return; }
   document.getElementById('enemy-wipe-modal').classList.add('show');
 }
 
@@ -3493,6 +3511,17 @@ async function confirmEnemyWipe() {
   const teamId=document.getElementById('ewm-team-select').value;
   if(!teamId){ toast('SELECT A TEAM','warn'); return; }
   closeEnemyWipeModal();
+  const team=teams.find(t=>t.id===teamId); if(!team) return;
+  // Undo if already wiped at current time
+  if(team.time_of_wipe===state.time){
+    team.time_of_wipe=null; team.confirmed_position=null;
+    if(sb&&!String(teamId).startsWith('local_')){
+      await sb.from('teams').update({time_of_wipe:null,confirmed_position:null}).eq('id',teamId);
+    }
+    toast(`⚑ ${team.name} wipe removed`,'ok');
+    renderTimelineTicks(); renderAnnotationLog({scrollToTop:true}); return;
+  }
+  // New wipe — open position modal
   openWipeModal(teamId, false);
 }
 function closeEnemyWipeModal(){ document.getElementById('enemy-wipe-modal').classList.remove('show'); }
@@ -3532,8 +3561,12 @@ function renderSlmPlayers() {
   const alive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
   if (!alive.length) {
     const empty = document.createElement('div');
-    empty.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:10px 0;';
-    empty.textContent = matchPlayers.length ? 'No alive players at this time.' : 'No players registered — use Active Squad first.';
+    empty.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;padding:10px 0;line-height:1.8;';
+    if(matchPlayers.length === 0) {
+      empty.innerHTML = 'No active squad registered.<br><span style="color:var(--yellow);cursor:pointer;" onclick="closeSelfLossModal();openActivePlayersModal(state.matchId)">→ Register Active Squad</span>';
+    } else {
+      empty.textContent = 'No alive players at this time.';
+    }
     container.appendChild(empty);
     return;
   }
@@ -3771,6 +3804,19 @@ function renderAnnotationLog(opts) {
     wipePositions[t.id] = totalTeams - i;
   });
 
+  // ── Wipe events — ALL match teams, not filtered by logTeams ──
+  // (enemy wipes must always appear regardless of which team is active)
+  matchTeams.forEach(team=>{
+    if(team.time_of_wipe==null) return;
+    const pos = wipePositions[team.id];
+    const posLabel = pos ? ` — #${pos}` : '';
+    if(team.is_self){
+      events.push({ time:team.time_of_wipe, type:'wipe', title:`SELF wiped${posLabel}`, icon:'☠', iconClass:'wipe', teamId:team.id, teamColor:team.color, isWipe:true, isSelfWipe:true });
+    } else {
+      events.push({ time:team.time_of_wipe, type:'wipe', title:`${team.name} wiped${posLabel}`, icon:'⚑', iconClass:'wipe', teamId:team.id, teamColor:team.color, isWipe:true, isSelfWipe:false });
+    }
+  });
+
   // ── Shape events per team ──
   logTeams.forEach(team=>{
     if(logTeamFilter!=='ALL' && team.id!==logTeamFilter) return;
@@ -3797,17 +3843,6 @@ function renderAnnotationLog(opts) {
       }
       events.push({ time:s.time||0, type:s.type, title, icon, iconClass, teamId:team.id, teamColor:team.color });
     });
-
-    // ── Wipe events with position ──
-    if(team.time_of_wipe!=null){
-      const pos = wipePositions[team.id];
-      const posLabel = pos ? ` — #${pos}` : '';
-      if(team.is_self){
-        events.push({ time:team.time_of_wipe, type:'wipe', title:`SELF wiped${posLabel}`, icon:'☠', iconClass:'wipe', teamId:team.id, teamColor:team.color });
-      } else {
-        events.push({ time:team.time_of_wipe, type:'wipe', title:`${team.name} wiped${posLabel}`, icon:'⚑', iconClass:'wipe', teamId:team.id, teamColor:team.color });
-      }
-    }
   });
 
   // ── Sort oldest→newest, reverse so newest is at TOP ──
@@ -3823,9 +3858,26 @@ function renderAnnotationLog(opts) {
   reversed.forEach(ev=>{
     const entry=document.createElement('div');
     const isLit = ev.time<=state.time;
-    entry.className='annotation-entry'+(isLit?'':' future');
+    entry.className='annotation-entry'+(isLit?'':' future')+(ev.isWipe?' wipe-entry':'');
     entry.dataset.evTime=ev.time;
-    entry.onclick=()=>jumpToTime(ev.time);
+    if(ev.isWipe) {
+      // Wipe entries: click jumps to time; second click at that time triggers undo
+      entry.onclick=()=>{
+        jumpToTime(ev.time);
+        // Add undo hint briefly
+        const hint = entry.querySelector('.wipe-undo-hint');
+        if(!hint){
+          const h=document.createElement('div');
+          h.className='wipe-undo-hint';
+          h.style.cssText='font-family:var(--font-mono);font-size:9px;color:var(--orange);letter-spacing:1px;margin-top:3px;text-transform:uppercase;';
+          h.textContent=ev.isSelfWipe ? '↩ Press ☠ SELF WIPE to undo' : '↩ Press ⚑ ENEMY WIPE again to undo';
+          entry.appendChild(h);
+          setTimeout(()=>h.remove(), 3000);
+        }
+      };
+    } else {
+      entry.onclick=()=>jumpToTime(ev.time);
+    }
     const iconEl=document.createElement('div'); iconEl.className='annotation-icon '+ev.iconClass; iconEl.textContent=ev.icon;
     const bodyEl=document.createElement('div'); bodyEl.className='annotation-body';
     const titleEl=document.createElement('div'); titleEl.className='annotation-title'; titleEl.textContent=ev.title;
