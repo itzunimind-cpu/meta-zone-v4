@@ -1242,6 +1242,9 @@ let state = {
 
 let filters = { zone:true, fight:true, rotation:true, pin:true };
 
+// Zone circles are match-scoped (team_id = null), stored separately
+let zonesCache = {}; // keyed by matchId → [{id, type, tag, cx, cy, r, time, zone_phase}]
+
 // Canvas refs
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
@@ -1314,7 +1317,7 @@ async function signOut() { if (sb) await sb.auth.signOut(); }
 
 function resetLocalState() {
   tournaments=[]; days=[]; matches=[]; teams=[];
-  shapesCache={}; overlayState={}; annotations=[]; matchPlayers=[];
+  shapesCache={}; zonesCache={}; overlayState={}; annotations=[]; matchPlayers=[];
   knownTeams=[];
   state.multiTrackActive=false; state.multiTrackTeams=[];
   const btn=document.getElementById('btn-multi-track');
@@ -1364,17 +1367,27 @@ async function loadAllData() {
 
 async function loadShapesForMatch(matchId) {
   const matchTeams = teams.filter(t=>t.match_id===matchId);
-  if (!matchTeams.length) return;
   setSyncState('syncing');
   try {
-    const teamIds = matchTeams.map(t=>t.id);
-    const {data,error} = await sb.from('shapes').select('*').in('team_id',teamIds).order('created_at');
-    if(error) throw error;
-    matchTeams.forEach(t=>{ shapesCache[t.id]=[]; });
-    data.forEach(row=>{
-      if(!shapesCache[row.team_id]) shapesCache[row.team_id]=[];
-      shapesCache[row.team_id].push(dbRowToShape(row));
-    });
+    // Load team shapes (non-circle only — circles are match-level)
+    if (matchTeams.length) {
+      const teamIds = matchTeams.map(t=>t.id);
+      const {data,error} = await sb.from('shapes').select('*').in('team_id',teamIds).neq('type','circle').order('created_at');
+      if(error) throw error;
+      matchTeams.forEach(t=>{ shapesCache[t.id]=[]; });
+      data.forEach(row=>{
+        if(!shapesCache[row.team_id]) shapesCache[row.team_id]=[];
+        shapesCache[row.team_id].push(dbRowToShape(row));
+      });
+    }
+    // Load zone circles (team_id IS NULL, match-level)
+    const {data:zData,error:zError} = await sb.from('shapes').select('*')
+      .eq('match_id', matchId).eq('type','circle').is('team_id',null).order('zone_phase');
+    if(!zError) {
+      zonesCache[matchId] = (zData||[]).map(dbRowToShape);
+    } else {
+      zonesCache[matchId] = [];
+    }
     setSyncState('saved');
     draw();
   } catch(e) {
@@ -1432,7 +1445,12 @@ async function loadMatchPlayers(matchId) {
 function shapeToDbRow(shape, teamId, matchId) {
   const base = { team_id:teamId, match_id:matchId, user_id:currentUser?.id,
                  type:shape.type, tag:shape.tag, time_seconds:shape.time };
-  if(shape.type==='circle') return {...base, cx:shape.cx, cy:shape.cy, radius:shape.r};
+  if(shape.type==='circle') {
+    // Zones are match-level: team_id=null, include zone_phase and map_key
+    const match = matches.find(m=>m.id===matchId);
+    return { ...base, team_id:null, cx:shape.cx, cy:shape.cy, radius:shape.r,
+             zone_phase:shape.zone_phase||1, zone_type:'white', map_key:match?.map_key||state.mapKey };
+  }
   if(shape.type==='line')   return {...base, x1:shape.x1, y1:shape.y1, x2:shape.x2, y2:shape.y2};
   if(shape.type==='path')   return {...base, path_points:JSON.stringify(shape.points)};
   if(shape.type==='pin')    return {...base, pin_x:shape.x, pin_y:shape.y, label:shape.label};
@@ -1442,7 +1460,7 @@ function shapeToDbRow(shape, teamId, matchId) {
 
 function dbRowToShape(row) {
   const base = { id:row.id, type:row.type, tag:row.tag, time:row.time_seconds };
-  if(row.type==='circle') return {...base, cx:row.cx, cy:row.cy, r:row.radius};
+  if(row.type==='circle') return {...base, cx:row.cx, cy:row.cy, r:row.radius, zone_phase:row.zone_phase||1};
   if(row.type==='line')   return {...base, x1:row.x1, y1:row.y1, x2:row.x2, y2:row.y2};
   if(row.type==='path')   return {...base, points: typeof row.path_points==='string' ? JSON.parse(row.path_points) : row.path_points};
   if(row.type==='pin')    return {...base, x:row.pin_x, y:row.pin_y, label:row.label};
@@ -1450,22 +1468,37 @@ function dbRowToShape(row) {
   return base;
 }
 
-// ══════════════════════════════════════════════════════
-// MANUAL SAVE
-// ══════════════════════════════════════════════════════
+function getNextZonePhase() {
+  const zones = zonesCache[state.matchId] || [];
+  return zones.length + 1;
+}
+
+
 function queueForSave() { setSaveState('idle'); renderTimelineTicks(); }
 
 async function manualSave() {
-  if(!sb||!state.activeTeamId||!state.matchId){ toast('Nothing to save','warn'); return; }
+  if(!sb||!state.matchId){ toast('Nothing to save','warn'); return; }
   setSaveState('saving'); setSyncState('syncing');
   try {
-    const shapes = shapesCache[state.activeTeamId]||[];
-    const toInsert = shapes.filter(s=>!s.id||String(s.id).startsWith('local_'));
-    if(toInsert.length) {
-      const rows = toInsert.map(s=>shapeToDbRow(s,state.activeTeamId,state.matchId));
-      const {data,error} = await sb.from('shapes').insert(rows).select();
-      if(error) throw error;
-      data.forEach((row,i)=>{ toInsert[i].id=row.id; });
+    // Save team shapes (non-circle)
+    if(state.activeTeamId) {
+      const shapes = shapesCache[state.activeTeamId]||[];
+      const toInsert = shapes.filter(s=>!s.id||String(s.id).startsWith('local_'));
+      if(toInsert.length) {
+        const rows = toInsert.map(s=>shapeToDbRow(s,state.activeTeamId,state.matchId));
+        const {data,error} = await sb.from('shapes').insert(rows).select();
+        if(error) throw error;
+        data.forEach((row,i)=>{ toInsert[i].id=row.id; });
+      }
+    }
+    // Save zone circles (match-level, team_id=null)
+    const zones = zonesCache[state.matchId]||[];
+    const zonesToInsert = zones.filter(s=>!s.id||String(s.id).startsWith('local_'));
+    if(zonesToInsert.length) {
+      const zRows = zonesToInsert.map(s=>shapeToDbRow(s, null, state.matchId));
+      const {data:zData,error:zErr} = await sb.from('shapes').insert(zRows).select();
+      if(zErr) throw zErr;
+      zData.forEach((row,i)=>{ zonesToInsert[i].id=row.id; });
     }
     setSyncState('saved'); setSaveState('saved'); toast('SAVED','ok');
     setTimeout(()=>setSaveState('idle'),2000);
@@ -1770,10 +1803,14 @@ function onPointerUp(e) {
     if(dist<4/zoom) return;
     const cx=(p1.x+wx)/2, cy=(p1.y+wy)/2, r=dist/2;
     circleP1=null; drawing=false;
-    const shape={type:'circle',cx,cy,r,tag:'zone',time:state.time};
-    const shapes=getActiveShapes();
-    if(shapes){ shapes.push(shape); queueForSave(shape); }
-    preview=null; draw(); return;
+    const zonePhase = getNextZonePhase();
+    const shape={type:'circle',cx,cy,r,tag:'zone',time:state.time, zone_phase:zonePhase};
+    if(!zonesCache[state.matchId]) zonesCache[state.matchId]=[];
+    zonesCache[state.matchId].push(shape);
+    queueForSave(shape);
+    preview=null; draw();
+    renderAnnotationLog({scrollToTop:true});
+    return;
   }
   if(!drawing) return;
   drawing=false;
@@ -1825,6 +1862,15 @@ function draw() {
     ctx.fillText('SELECT A MAP',40/zoom,60/zoom);
   }
 
+  // Zone circles — match-level, always cyan, visible regardless of active team
+  if(filters.zone) {
+    const zones = zonesCache[state.matchId]||[];
+    zones.forEach(s=>{
+      if(s.time>state.time) return;
+      drawZoneCircle(s);
+    });
+  }
+
   // Overlay teams
   teams.filter(t=>t.match_id===state.matchId).forEach(team=>{
     if(team.id===state.activeTeamId) return;
@@ -1852,7 +1898,11 @@ function draw() {
   }
 
   // Preview
-  if(preview&&activeTeam) drawShape(preview,true,activeTeam.color,1);
+  if(preview&&preview.type==='circle'){
+    drawZoneCircle({...preview, zone_phase:getNextZonePhase()}, true);
+  } else if(preview&&activeTeam) {
+    drawShape(preview,true,activeTeam.color,1);
+  }
 
   // Circle first-point indicator
   if(circleP1){
@@ -1886,15 +1936,8 @@ function drawShape(s, isPreview, teamColor, alphaMult) {
   ctx.strokeStyle=stroke; ctx.fillStyle=fill; ctx.lineWidth=lw; ctx.setLineDash([]);
 
   if(s.type==='circle'){
-    ctx.beginPath(); ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    if(isPreview&&s._p1&&s._p2){
-      ctx.setLineDash([4/zoom,4/zoom]);
-      ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1/zoom;
-      ctx.beginPath(); ctx.moveTo(s._p1.x,s._p1.y); ctx.lineTo(s._p2.x,s._p2.y); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle='rgba(255,255,255,.7)'; ctx.font=`${11/zoom}px JetBrains Mono,monospace`;
-      ctx.fillText(`r:${Math.round(s.r)}`,s.cx+6/zoom,s.cy-6/zoom);
-    }
+    // Circles are zone-level and rendered via drawZoneCircle — skip here
+    return;
   } else if(s.type==='line'){
     if(s.tag==='rotation') drawArrow(s.x1,s.y1,s.x2,s.y2,stroke,lw);
     else{ ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke(); }
@@ -1904,6 +1947,32 @@ function drawShape(s, isPreview, teamColor, alphaMult) {
     drawPinMarker(s.x,s.y,pin,isPreview);
   }
 }
+
+function drawZoneCircle(s, isPreview) {
+  const w=+document.getElementById('sl-width').value;
+  const op=+document.getElementById('sl-opacity').value;
+  const lw=w/zoom;
+  const stroke=`rgba(34,211,238,${op.toFixed(2)})`;
+  const fill  =`rgba(34,211,238,${(op*.12).toFixed(2)})`;
+  ctx.strokeStyle=stroke; ctx.fillStyle=fill; ctx.lineWidth=lw; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  // Label: "Z N"
+  const label = `Z${s.zone_phase||''}`;
+  ctx.fillStyle=`rgba(34,211,238,${Math.min(op+.3,1).toFixed(2)})`;
+  ctx.font=`bold ${13/zoom}px JetBrains Mono,monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(label, s.cx, s.cy);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  if(isPreview&&s._p1&&s._p2){
+    ctx.setLineDash([4/zoom,4/zoom]);
+    ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1/zoom;
+    ctx.beginPath(); ctx.moveTo(s._p1.x,s._p1.y); ctx.lineTo(s._p2.x,s._p2.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,.7)'; ctx.font=`${11/zoom}px JetBrains Mono,monospace`;
+    ctx.fillText(`r:${Math.round(s.r)}`,s.cx+6/zoom,s.cy-6/zoom);
+  }
+}
+
 
 function drawArrow(x1,y1,x2,y2,stroke,lw) {
   const angle=Math.atan2(y2-y1,x2-x1), hl=12/zoom;
@@ -2225,7 +2294,7 @@ async function deleteSelected(type) {
     days=days.filter(d=>d.tournament_id!==t.id);
     matches=matches.filter(m=>!dIds2.includes(m.day_id));
     teams=teams.filter(tm=>!mIds2.includes(tm.match_id));
-    shapesCache={}; state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
+    shapesCache={}; zonesCache={}; state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
   } else if(type==='day'){
     if(!state.dayId) return;
     const d=days.find(x=>x.id===state.dayId);
@@ -2243,7 +2312,7 @@ async function deleteSelected(type) {
     days=days.filter(x=>x.id!==d.id);
     matches=matches.filter(m=>m.day_id!==d.id);
     teams=teams.filter(tm=>!mIds2.includes(tm.match_id));
-    shapesCache={}; state.dayId=null; state.matchId=null; state.activeTeamId=null;
+    shapesCache={}; zonesCache={}; state.dayId=null; state.matchId=null; state.activeTeamId=null;
     if(sb&&state.tournamentId){
       const {data}=await sb.from('days').select('*').eq('tournament_id',state.tournamentId).order('order_index');
       if(data){ days=days.filter(d2=>d2.tournament_id!==state.tournamentId); days.push(...data); }
@@ -2261,7 +2330,7 @@ async function deleteSelected(type) {
     }
     teams=teams.filter(t=>t.match_id!==m.id);
     matches=matches.filter(x=>x.id!==m.id);
-    shapesCache={}; state.matchId=null; state.activeTeamId=null;
+    shapesCache={}; zonesCache={}; state.matchId=null; state.activeTeamId=null;
     if(sb&&state.dayId){
       const {data}=await sb.from('matches').select('*').eq('day_id',state.dayId).order('created_at');
       if(data){ matches=matches.filter(m2=>m2.day_id!==state.dayId); matches.push(...data); }
@@ -2680,6 +2749,20 @@ function toggleAnnotationMode(isEdit) {
 const redoStack = {}; // teamId → shape[]
 
 async function undo() {
+  // Check if last zone was drawn (zones take undo priority since they're match-level)
+  const zones = zonesCache[state.matchId]||[];
+  if(zones.length) {
+    const lastZone = zones[zones.length-1];
+    // Only undo zone if it was drawn more recently than last team shape
+    const teamShapes = getActiveShapes()||[];
+    const lastTeamShape = teamShapes[teamShapes.length-1];
+    const zoneIsNewer = !lastTeamShape || (lastZone.time >= (lastTeamShape.time||0));
+    if(zoneIsNewer) {
+      zones.pop();
+      if(sb&&lastZone?.id&&!String(lastZone.id).startsWith('local_')) await sb.from('shapes').delete().eq('id',lastZone.id);
+      draw(); renderAnnotationLog(); return;
+    }
+  }
   const shapes=getActiveShapes(); if(!shapes||!shapes.length) return;
   const removed=shapes.pop();
   if(!redoStack[state.activeTeamId]) redoStack[state.activeTeamId]=[];
@@ -3084,17 +3167,22 @@ function renderAnnotationLog(opts) {
     ? matchTeams.filter(t=>state.multiTrackTeams.includes(t.id))
     : matchTeams.filter(t=>{ const isActive=t.id===state.activeTeamId; const ov=overlayState[t.id]; return isActive||ov?.visible; });
 
+  // Zone circles — match-level, always shown regardless of team filter
+  (zonesCache[state.matchId]||[]).forEach(s=>{
+    events.push({ time:s.time||0, type:'circle', title:`Zone ${s.zone_phase||''}`, icon:'⭕', iconClass:'zone', teamId:null });
+  });
+
   logTeams.forEach(team=>{
     // [E9] Team filter
     if(logTeamFilter!=='ALL' && team.id!==logTeamFilter) return;
 
     (shapesCache[team.id]||[]).forEach(s=>{
-      if(s.type==='path') return;
+      if(s.type==='circle'||s.type==='path') return; // circles handled above; paths show as Rotation N (C11)
       let icon,iconClass,title;
-      if(s.type==='circle'){   icon='⭕'; iconClass='zone';  title=`Zone — ${team.name}`; }
-      else if(s.type==='fight'){ icon='⚔'; iconClass='fight'; title=`${s.teamA||'?'} vs ${s.teamB||'?'}`; }
+      if(s.type==='fight'){ icon='⚔'; iconClass='fight'; title=`${s.teamA||'?'} vs ${s.teamB||'?'}`; }
       else if(s.type==='pin'){  icon='📍'; iconClass='pin';   title=s.label||'Pin'; }
       else if(s.type==='line'){ icon='→';  iconClass='zone';  title=`Rotation — ${team.name}`; }
+      else return;
       events.push({ time:s.time||0, type:s.type, title, icon, iconClass, teamId:team.id, teamColor:team.color });
     });
     // Wipe events
@@ -3259,7 +3347,7 @@ function renderMultiTrackStats() {
     const team = teams.find(t => t.id === tid); if (!team) return;
     const shapes = shapesCache[tid] || [];
     const visibleShapes = shapes.filter(s => s.time <= state.time);
-    const zones = visibleShapes.filter(s => s.type === 'circle').length;
+    const zones = (zonesCache[state.matchId]||[]).filter(s => s.time <= state.time).length;
     const rots  = visibleShapes.filter(s => s.type === 'line' || s.type === 'path').length;
     const fights= visibleShapes.filter(s => s.type === 'fight').length;
     const pins  = visibleShapes.filter(s => s.type === 'pin').length;
