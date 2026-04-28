@@ -1738,15 +1738,31 @@ async function openActivePlayersModal(matchId) {
   }
 
   try {
-    const {data,error} = await sb
+    // Step 1: get player_ids registered for this tournament
+    let {data:tpData, error:tpErr} = await sb
       .from('tournament_players')
-      .select('player_id, players(id, name, role)')
+      .select('player_id')
       .eq('tournament_id', tid)
       .eq('user_id', currentUser.id);
-    if(!error && data) {
-      _apmAllPlayers = data
-        .map(r => ({ id: r.players?.id || r.player_id, name: r.players?.name || 'Unknown', role: r.players?.role || '' }))
-        .filter(p => p.name !== 'Unknown');
+    // Fallback: try without user_id filter (in case rows were saved without it)
+    if((!tpData || tpData.length === 0) && !tpErr) {
+      const fb = await sb
+        .from('tournament_players')
+        .select('player_id')
+        .eq('tournament_id', tid);
+      if(!fb.error && fb.data) tpData = fb.data;
+    }
+    if(!tpErr && tpData && tpData.length > 0) {
+      const playerIds = tpData.map(r => r.player_id).filter(Boolean);
+      // Step 2: fetch player details directly from players table
+      const {data:pData, error:pErr} = await sb
+        .from('players')
+        .select('id, name, role')
+        .in('id', playerIds);
+      if(!pErr && pData) {
+        _apmAllPlayers = pData.map(r => ({ id: r.id, name: r.name || 'Unknown', role: r.role || '' }))
+          .filter(p => p.name !== 'Unknown');
+      }
     }
   } catch(e) { /* non-fatal */ }
 
