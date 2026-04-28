@@ -502,20 +502,25 @@ function resetLocalState() {
 // ──────────────────────────────────────────────
 // INIT
 // ──────────────────────────────────────────────
+let _booted = false;
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
+    _booted = true;
     currentUser = session.user;
     document.getElementById('auth-screen').classList.add('hidden');
     init();
   }
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
+      if (_booted) return;
+      _booted = true;
       currentUser = session.user;
       document.getElementById('auth-screen').classList.add('hidden');
       init();
     }
     if (event === 'SIGNED_OUT') {
+      _booted = false;
       resetLocalState();
       document.getElementById('auth-screen').classList.remove('hidden');
     }
