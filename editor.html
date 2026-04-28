@@ -1706,31 +1706,53 @@ async function loadMatchPlayers(matchId) {
   matchPlayers = [];
   if(!sb||!matchId||!currentUser) return;
   try {
-    // Primary query with user_id filter
+    // STEP 1: get match_players (no embedded join — robust to FK/RLS issues)
     let {data,error}=await sb.from('match_players')
-      .select('id, player_id, kills, damage, time_of_loss, players(name)')
+      .select('id, player_id, kills, damage, time_of_loss, user_id, created_at')
       .eq('match_id', matchId)
       .eq('user_id', currentUser.id)
       .order('created_at');
-    // Fallback: try without user_id filter (handles missing column OR empty result)
-    if(!data || data.length === 0 || error) {
+    // Fallback: try without user_id filter
+    if((!data || data.length === 0) && !error) {
       const fb = await sb.from('match_players')
-        .select('id, player_id, kills, damage, time_of_loss, players(name)')
+        .select('id, player_id, kills, damage, time_of_loss, user_id, created_at')
         .eq('match_id', matchId)
         .order('created_at');
       if(!fb.error && fb.data) { data = fb.data; error = null; }
     }
-    if(!error && data && data.length > 0) {
-      matchPlayers = data.map(r=>({
-        id: r.id,
-        player_id: r.player_id,
-        name: r.players?.name || 'Unknown',
-        kills: r.kills||0,
-        damage: r.damage||0,
-        time_of_loss: r.time_of_loss ?? null,
-      }));
+    if(error) {
+      console.error('[MATCH_PLAYERS] query failed:', error);
+      return;
     }
-  } catch(e) { matchPlayers=[]; }
+    if(!data || !data.length) {
+      console.warn('[MATCH_PLAYERS] no rows for match', matchId);
+      return;
+    }
+    // STEP 2: fetch player names by id
+    const playerIds = [...new Set(data.map(r=>r.player_id).filter(Boolean))];
+    let nameById = {};
+    if(playerIds.length) {
+      const {data:pData, error:pErr} = await sb.from('players')
+        .select('id, name')
+        .in('id', playerIds);
+      if(pErr) {
+        console.error('[MATCH_PLAYERS] players name lookup failed:', pErr);
+      } else if(pData) {
+        pData.forEach(p => { nameById[p.id] = p.name; });
+      }
+    }
+    matchPlayers = data.map(r=>({
+      id: r.id,
+      player_id: r.player_id,
+      name: nameById[r.player_id] || 'Unknown',
+      kills: r.kills||0,
+      damage: r.damage||0,
+      time_of_loss: r.time_of_loss ?? null,
+    }));
+  } catch(e) {
+    console.error('[MATCH_PLAYERS] unexpected error:', e);
+    matchPlayers=[];
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1760,30 +1782,79 @@ async function openActivePlayersModal(matchId) {
   }
 
   try {
-    // Single joined query — avoids RLS issues with direct players table access
+    // STEP 1: Get player_ids registered to this tournament.
+    // Two-step query (no embedded join) — works even if PostgREST FK detection or
+    // RLS on the joined `players` table is misconfigured.
     let {data:tpData, error:tpErr} = await sb
       .from('tournament_players')
-      .select('player_id, players(id, name, role)')
+      .select('player_id, user_id')
       .eq('tournament_id', tid)
       .eq('user_id', currentUser.id);
     // Fallback: try without user_id filter (in case rows were saved without it)
     if((!tpData || tpData.length === 0) && !tpErr) {
       const fb = await sb
         .from('tournament_players')
-        .select('player_id, players(id, name, role)')
+        .select('player_id, user_id')
         .eq('tournament_id', tid);
       if(!fb.error && fb.data) tpData = fb.data;
     }
-    if(!tpErr && tpData && tpData.length > 0) {
-      _apmAllPlayers = tpData
-        .map(r => ({
-          id: r.players?.id || r.player_id,
-          name: r.players?.name || 'Unknown',
-          role: r.players?.role || ''
-        }))
-        .filter(p => p.name !== 'Unknown');
+    if(tpErr) {
+      console.error('[ACTIVE_SQUAD] tournament_players query failed:', tpErr);
+      document.getElementById('apm-players').innerHTML =
+        `<div style="font-family:var(--font-mono);font-size:10px;color:var(--red);text-align:center;padding:16px;line-height:1.6;">
+          Roster query failed:<br>${esc(tpErr.message||'unknown error')}
+        </div>`;
+      return;
     }
-  } catch(e) { /* non-fatal */ }
+    if(!tpData || tpData.length === 0) {
+      console.warn('[ACTIVE_SQUAD] No tournament_players for tournament', tid);
+      _apmAllPlayers = [];
+      _renderApmPlayers();
+      return;
+    }
+    const playerIds = [...new Set(tpData.map(r=>r.player_id).filter(Boolean))];
+    if(!playerIds.length) {
+      _apmAllPlayers = [];
+      _renderApmPlayers();
+      return;
+    }
+    // STEP 2: Fetch player details in a separate query
+    const {data:pData, error:pErr} = await sb
+      .from('players')
+      .select('id, name, role')
+      .in('id', playerIds);
+    if(pErr) {
+      console.error('[ACTIVE_SQUAD] players query failed:', pErr);
+      document.getElementById('apm-players').innerHTML =
+        `<div style="font-family:var(--font-mono);font-size:10px;color:var(--red);text-align:center;padding:16px;line-height:1.6;">
+          Player details query failed:<br>${esc(pErr.message||'unknown error')}
+        </div>`;
+      return;
+    }
+    if(pData && pData.length) {
+      _apmAllPlayers = pData.map(p => ({
+        id: p.id,
+        name: p.name || 'Unnamed',
+        role: p.role || ''
+      }));
+    } else {
+      // tournament_players rows exist but players rows missing (orphaned refs)
+      console.warn('[ACTIVE_SQUAD] tournament_players found but players missing for ids:', playerIds);
+      _apmAllPlayers = [];
+    }
+  } catch(e) {
+    console.error('[ACTIVE_SQUAD] unexpected error:', e);
+  }
+
+  // Pre-select players already registered as match_players so the user
+  // can see what the current active squad is when the button is clicked.
+  try {
+    if(matchPlayers && matchPlayers.length) {
+      matchPlayers.forEach(mp => {
+        if(mp.player_id) _apmSelectedIds.add(mp.player_id);
+      });
+    }
+  } catch(e) {}
 
   _renderApmPlayers();
 }
@@ -1843,23 +1914,43 @@ async function confirmActivePlayers() {
 
   const mid = state.matchId;
   if(!sb||!mid||!currentUser) return;
+
+  const selectedIds = [..._apmSelectedIds];
   try {
-    const rows = [..._apmSelectedIds].map(pid => ({
-      match_id: mid, player_id: pid, user_id: currentUser.id, kills: 0, damage: 0,
-    }));
-    const {data, error} = await sb.from('match_players').insert(rows)
-      .select('id, player_id, kills, damage, time_of_loss, players(name)');
-    if(error) throw error;
-    if(data) {
-      matchPlayers = data.map(r=>({
-        id: r.id, player_id: r.player_id,
-        name: r.players?.name || 'Unknown',
-        kills: r.kills||0, damage: r.damage||0, time_of_loss: null,
-      }));
+    // Reconcile with existing match_players: only insert NEW ones, delete REMOVED ones.
+    // This way the user can edit the active squad without duplicate-key issues
+    // and without losing kill/loss progress for players that stay.
+    const existingByPid = new Map((matchPlayers||[]).map(mp => [mp.player_id, mp]));
+    const existingPids  = new Set([...existingByPid.keys()]);
+    const newPids       = selectedIds.filter(pid => !existingPids.has(pid));
+    const removedPids   = [...existingPids].filter(pid => !_apmSelectedIds.has(pid));
+
+    // Delete removed
+    if(removedPids.length) {
+      const removedRowIds = removedPids
+        .map(pid => existingByPid.get(pid)?.id)
+        .filter(Boolean);
+      if(removedRowIds.length) {
+        const {error:delErr} = await sb.from('match_players').delete().in('id', removedRowIds);
+        if(delErr) console.error('[ACTIVE_SQUAD] delete failed:', delErr);
+      }
     }
-    toast(`Squad registered: ${matchPlayers.length} players`, 'ok');
+
+    // Insert new
+    if(newPids.length) {
+      const rows = newPids.map(pid => ({
+        match_id: mid, player_id: pid, user_id: currentUser.id, kills: 0, damage: 0,
+      }));
+      const {error:insErr} = await sb.from('match_players').insert(rows);
+      if(insErr) throw insErr;
+    }
+
+    // Reload from DB so matchPlayers is fresh
+    await loadMatchPlayers(mid);
+    toast(`Active squad: ${matchPlayers.length} player${matchPlayers.length!==1?'s':''}`, 'ok');
   } catch(e) {
-    toast('Squad save failed: ' + e.message, 'err');
+    console.error('[ACTIVE_SQUAD] save failed:', e);
+    toast('Squad save failed: ' + (e.message||e), 'err');
   }
 }
 
