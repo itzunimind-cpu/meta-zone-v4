@@ -1706,19 +1706,30 @@ async function loadMatchPlayers(matchId) {
   matchPlayers = [];
   if(!sb||!matchId||!currentUser) return;
   try {
-    const {data,error}=await sb.from('match_players')
+    // Primary query with user_id filter
+    let {data,error}=await sb.from('match_players')
       .select('id, player_id, kills, damage, time_of_loss, players(name)')
       .eq('match_id', matchId)
       .eq('user_id', currentUser.id)
       .order('created_at');
-    if(!error && data) matchPlayers = data.map(r=>({
-      id: r.id,
-      player_id: r.player_id,
-      name: r.players?.name || 'Unknown',
-      kills: r.kills||0,
-      damage: r.damage||0,
-      time_of_loss: r.time_of_loss ?? null,
-    }));
+    // Fallback: try without user_id filter (in case column missing or rows saved without it)
+    if((!data || data.length === 0) && !error) {
+      const fb = await sb.from('match_players')
+        .select('id, player_id, kills, damage, time_of_loss, players(name)')
+        .eq('match_id', matchId)
+        .order('created_at');
+      if(!fb.error && fb.data) { data = fb.data; error = null; }
+    }
+    if(!error && data && data.length > 0) {
+      matchPlayers = data.map(r=>({
+        id: r.id,
+        player_id: r.player_id,
+        name: r.players?.name || 'Unknown',
+        kills: r.kills||0,
+        damage: r.damage||0,
+        time_of_loss: r.time_of_loss ?? null,
+      }));
+    }
   } catch(e) { matchPlayers=[]; }
 }
 
