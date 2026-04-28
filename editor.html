@@ -1712,8 +1712,8 @@ async function loadMatchPlayers(matchId) {
       .eq('match_id', matchId)
       .eq('user_id', currentUser.id)
       .order('created_at');
-    // Fallback: try without user_id filter (in case column missing or rows saved without it)
-    if((!data || data.length === 0) && !error) {
+    // Fallback: try without user_id filter (handles missing column OR empty result)
+    if(!data || data.length === 0 || error) {
       const fb = await sb.from('match_players')
         .select('id, player_id, kills, damage, time_of_loss, players(name)')
         .eq('match_id', matchId)
