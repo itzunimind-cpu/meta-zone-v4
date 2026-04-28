@@ -543,12 +543,13 @@ async function signOut(){await sb.auth.signOut();}
 function resetLocalState(){tournaments=[];activeTournamentId=null;activeDayId=null;activeMatchId=null;matches=[];selectedMatch=null;renderTree();renderDayTabs();renderGrid();renderRP();}
 
 // ── INIT ──
+let _booted=false;
 (async()=>{
   const{data:{session}}=await sb.auth.getSession();
-  if(session){currentUser=session.user;document.getElementById('auth-screen').classList.add('hidden');await loadAll();}
+  if(session){_booted=true;currentUser=session.user;document.getElementById('auth-screen').classList.add('hidden');await loadAll();}
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session){currentUser=session.user;document.getElementById('auth-screen').classList.add('hidden');await loadAll();}
-    if(event==='SIGNED_OUT'){currentUser=null;document.getElementById('auth-screen').classList.remove('hidden');resetLocalState();}
+    if(event==='SIGNED_IN'&&session){if(_booted)return;_booted=true;currentUser=session.user;document.getElementById('auth-screen').classList.add('hidden');await loadAll();}
+    if(event==='SIGNED_OUT'){_booted=false;currentUser=null;document.getElementById('auth-screen').classList.remove('hidden');resetLocalState();}
   });
 })();
 
