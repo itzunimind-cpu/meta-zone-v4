@@ -1749,31 +1749,28 @@ async function openActivePlayersModal(matchId) {
   }
 
   try {
-    // Step 1: get player_ids registered for this tournament
+    // Single joined query — avoids RLS issues with direct players table access
     let {data:tpData, error:tpErr} = await sb
       .from('tournament_players')
-      .select('player_id')
+      .select('player_id, players(id, name, role)')
       .eq('tournament_id', tid)
       .eq('user_id', currentUser.id);
     // Fallback: try without user_id filter (in case rows were saved without it)
     if((!tpData || tpData.length === 0) && !tpErr) {
       const fb = await sb
         .from('tournament_players')
-        .select('player_id')
+        .select('player_id, players(id, name, role)')
         .eq('tournament_id', tid);
       if(!fb.error && fb.data) tpData = fb.data;
     }
     if(!tpErr && tpData && tpData.length > 0) {
-      const playerIds = tpData.map(r => r.player_id).filter(Boolean);
-      // Step 2: fetch player details directly from players table
-      const {data:pData, error:pErr} = await sb
-        .from('players')
-        .select('id, name, role')
-        .in('id', playerIds);
-      if(!pErr && pData) {
-        _apmAllPlayers = pData.map(r => ({ id: r.id, name: r.name || 'Unknown', role: r.role || '' }))
-          .filter(p => p.name !== 'Unknown');
-      }
+      _apmAllPlayers = tpData
+        .map(r => ({
+          id: r.players?.id || r.player_id,
+          name: r.players?.name || 'Unknown',
+          role: r.players?.role || ''
+        }))
+        .filter(p => p.name !== 'Unknown');
     }
   } catch(e) { /* non-fatal */ }
 
@@ -3389,8 +3386,9 @@ function downloadSnapshot() {
 let semSelectedPlayerId = null;
 
 function markSelfElim() {
+  if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   semSelectedPlayerId = null;
-  document.getElementById('sem-time').textContent = state.matchId ? fmtTime(state.time) : '—';
+  document.getElementById('sem-time').textContent = fmtTime(state.time);
   document.getElementById('sem-finish-count').value = '1';
   document.getElementById('sem-confirm-btn').disabled = true;
   renderSemPlayers();
@@ -3587,15 +3585,14 @@ function updateSelfButtonState() {
 let slmSelectedPlayerId = null;
 
 function markSelfLoss() {
+  if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
   slmSelectedPlayerId = null;
-  document.getElementById('slm-time').textContent = state.matchId ? fmtTime(state.time) : '—';
+  document.getElementById('slm-time').textContent = fmtTime(state.time);
   document.getElementById('btn-slm-confirm').disabled = true;
   const sel = document.getElementById('slm-killedby');
   sel.innerHTML = '<option value="">— None —</option>';
-  if(state.matchId) {
-    teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe)
-      .forEach(t=>sel.add(new Option(t.name, t.id)));
-  }
+  teams.filter(t=>t.match_id===state.matchId&&!t.is_self&&!t.time_of_wipe)
+    .forEach(t=>sel.add(new Option(t.name, t.id)));
   renderSlmPlayers();
   document.getElementById('self-loss-modal').classList.add('show');
 }
