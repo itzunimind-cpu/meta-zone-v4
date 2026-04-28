@@ -1931,7 +1931,6 @@ function toast(msg, type='info') {
 // MAP SYSTEM
 // ══════════════════════════════════════════════════════
 let mapImg = new Image();
-mapImg.crossOrigin='anonymous';
 
 const MAP_PATHS = {
   erangel:'Erangel.png', miramar:'Miramar.png', rondo:'Rondo.png', sanhok:'sanhok.png',
@@ -1941,7 +1940,7 @@ function loadMapKey(key) {
   if(key==='custom'){ document.getElementById('file-map').click(); return; }
   const src = MAP_PATHS[key]||(key+'.png');
   const img = new Image();
-  img.crossOrigin='anonymous'; img.src=src;
+  img.src=src;
   img.onload=()=>{ mapImg=img; WORLD_W=img.naturalWidth||2048; WORLD_H=img.naturalHeight||2048; resetView(); draw(); };
   img.onerror=()=>{ toast('MAP NOT FOUND: '+src,'warn'); WORLD_W=2048; WORLD_H=2048; mapImg=new Image(); draw(); };
   state.mapKey=key;
