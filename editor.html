@@ -1543,6 +1543,7 @@ const TEAM_COLORS=[
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
+let _booted = false;
 window.addEventListener('DOMContentLoaded', async () => {
   const savedMapKey = localStorage.getItem('mz_map') || 'erangel';
   document.getElementById('sel-map').value = savedMapKey;
@@ -1550,6 +1551,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   sb = supabase.createClient(SUPA_URL, SUPA_KEY);
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
+    _booted = true;
     currentUser = session.user;
     document.getElementById('auth-screen').classList.add('hidden');
     await loadAllData();
@@ -1559,12 +1561,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
+      if (_booted) return;
+      _booted = true;
       currentUser = session.user;
       document.getElementById('auth-screen').classList.add('hidden');
       await loadAllData();
       draw();
     }
     if (event === 'SIGNED_OUT') {
+      _booted = false;
       currentUser = null;
       document.getElementById('auth-screen').classList.remove('hidden');
       resetLocalState();
@@ -1637,6 +1642,9 @@ async function loadAllData() {
   }
 }
 
+// Batch-loads ALL shapes for every team in a match + zone circles.
+// Called once when a match is activated (_activateMatch, applyUrlParams).
+// Populates both shapesCache[teamId] and zonesCache[matchId].
 async function loadShapesForMatch(matchId) {
   const matchTeams = teams.filter(t=>t.match_id===matchId);
   setSyncState('syncing');
@@ -1667,6 +1675,9 @@ async function loadShapesForMatch(matchId) {
   }
 }
 
+// Lazy-loads shapes for a single team into shapesCache.
+// Called on-demand: overlay toggle, multitrack team add.
+// Does NOT load zone circles — those are match-level (use loadShapesForMatch).
 async function loadTeamShapes(teamId) {
   if(!sb) return;
   setSyncState('syncing');
@@ -2736,6 +2747,8 @@ async function confirmEditorGroupPicker(){
   await _finishMatchSetup();
 }
 
+// Inserts a SELF team into Supabase for a real (server-saved) match.
+// Only called when sb + currentUser are available.
 async function createDefaultTeams(matchId) {
   // Only SELF by default — others added dynamically
   const rows=[{name:'SELF',color:TEAM_COLORS[0],slot_index:0,match_id:matchId,user_id:currentUser.id,is_self:true}];
@@ -2746,6 +2759,9 @@ async function createDefaultTeams(matchId) {
   state.activeTeamId=data[0].id;
 }
 
+// Creates a local-only SELF team for the offline/no-auth path.
+// Uses a fake local_ id — never written to DB. Kept separate because
+// createDefaultTeams is async and requires sb + currentUser.
 function createDefaultTeamsLocal(matchId) {
   const t={id:'local_t_'+Date.now(),name:'SELF',color:TEAM_COLORS[0],slot_index:0,match_id:matchId,is_self:true};
   teams.push(t); shapesCache[t.id]=[]; state.activeTeamId=t.id;
