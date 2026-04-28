@@ -1127,17 +1127,50 @@ let _idxApmMatchId=null;
 
 async function maybeOpenActivePlayersModal(matchId){
   _idxApmMatchId=matchId;
-  // Check if tournament has any registered players
-  const{data,error}=await sb.from('tournament_players')
-    .select('player_id, players(id,name,role)')
+  // STEP 1: get tournament_players (no embedded join — robust)
+  let{data:tpData,error:tpErr}=await sb.from('tournament_players')
+    .select('player_id, user_id')
     .eq('tournament_id',activeTournamentId)
     .eq('user_id',currentUser.id);
-  if(error||!data||data.length===0){
-    // No players registered — go straight to editor
+  // Fallback without user_id filter
+  if((!tpData || !tpData.length) && !tpErr){
+    const fb=await sb.from('tournament_players')
+      .select('player_id, user_id')
+      .eq('tournament_id',activeTournamentId);
+    if(!fb.error && fb.data) tpData=fb.data;
+  }
+  if(tpErr){
+    console.error('[IDX_ACTIVE_SQUAD] tournament_players query failed:',tpErr);
+    toast('Roster load failed: '+tpErr.message,'err');
     redirectToEditor(matchId);
     return;
   }
-  _idxApmAllPlayers=data.map(r=>({id:r.players?.id||r.player_id,name:r.players?.name||'Unknown',role:r.players?.role||''})).filter(p=>p.name!=='Unknown');
+  if(!tpData||!tpData.length){
+    // No squad registered for this tournament — go straight to editor
+    redirectToEditor(matchId);
+    return;
+  }
+  // STEP 2: fetch player rows
+  const playerIds=[...new Set(tpData.map(r=>r.player_id).filter(Boolean))];
+  if(!playerIds.length){
+    redirectToEditor(matchId);
+    return;
+  }
+  const{data:pData,error:pErr}=await sb.from('players')
+    .select('id,name,role')
+    .in('id',playerIds);
+  if(pErr){
+    console.error('[IDX_ACTIVE_SQUAD] players query failed:',pErr);
+    toast('Player lookup failed: '+pErr.message,'err');
+    redirectToEditor(matchId);
+    return;
+  }
+  if(!pData||!pData.length){
+    console.warn('[IDX_ACTIVE_SQUAD] tournament_players found but no matching players for ids',playerIds);
+    redirectToEditor(matchId);
+    return;
+  }
+  _idxApmAllPlayers=pData.map(p=>({id:p.id,name:p.name||'Unnamed',role:p.role||''}));
   _idxApmSelectedIds=new Set();
   _renderIdxApmPlayers();
   document.getElementById('idx-apm').classList.add('show');
