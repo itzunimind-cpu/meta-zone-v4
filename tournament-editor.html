@@ -407,6 +407,7 @@ let selfTeamName = 'SELF';
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
+let _booted = false;
 (async function init() {
   const params = new URLSearchParams(location.search);
   let ctx = {};
@@ -424,6 +425,7 @@ let selfTeamName = 'SELF';
   sb = supabase.createClient(SUPA_URL, SUPA_KEY);
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
+    _booted = true;
     currentUser = session.user;
     document.getElementById('auth-screen').classList.add('hidden');
     await loadAllData();
@@ -433,11 +435,14 @@ let selfTeamName = 'SELF';
 
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
+      if (_booted) return;
+      _booted = true;
       currentUser = session.user;
       document.getElementById('auth-screen').classList.add('hidden');
       await loadAllData();
     }
     if (event === 'SIGNED_OUT') {
+      _booted = false;
       currentUser = null;
       document.getElementById('auth-screen').classList.remove('hidden');
     }
