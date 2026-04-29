@@ -626,6 +626,25 @@ canvas.path-mode{ cursor:cell; }
   cursor:pointer;transition:opacity .15s;letter-spacing:.03em;
 }
 .btn-results-save:hover{ opacity:.88; }
+/* Post-save "what's next" footer */
+.results-whats-next{ display:flex;flex-direction:column;gap:10px; }
+.results-whats-next-label{
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;text-align:center;
+}
+.results-whats-next-btns{ display:flex;gap:8px; }
+.btn-results-keep{
+  flex:1;padding:11px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;font-family:var(--font-mono);font-size:11px;cursor:pointer;
+  letter-spacing:.06em;text-transform:uppercase;transition:all .15s;
+}
+.btn-results-keep:hover{ border-color:var(--accent);color:var(--accent); }
+.btn-results-next{
+  flex:2;padding:11px;background:var(--green);color:#020617;border:none;
+  border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;
+  cursor:pointer;letter-spacing:.03em;text-transform:uppercase;transition:opacity .15s;
+}
+.btn-results-next:hover{ opacity:.88; }
 
 /* ══ EDITOR MAP PICKER MODAL ══ */
 #editor-map-modal{
@@ -1324,7 +1343,7 @@ canvas.path-mode{ cursor:cell; }
       <button class="btn-results-close" onclick="hideResultsPanel()">CLOSE</button>
     </div>
     <div class="results-body" id="results-body"></div>
-    <div class="results-footer">
+    <div class="results-footer" id="results-footer">
       <button class="btn-results-save" onclick="saveMatchResults()">SAVE RESULTS</button>
     </div>
   </div>
@@ -3971,12 +3990,25 @@ async function saveMatchResults() {
       String(tid).startsWith('local_') ? null :
       sb.from('teams').update(vals).eq('id',tid)
     ).filter(Boolean);
-    try{ await Promise.all(promises); toast('RESULTS SAVED','ok'); } catch(e){ toast('SAVE ERROR: '+e.message,'err'); }
+    try{ await Promise.all(promises); toast('RESULTS SAVED ✓','ok'); } catch(e){ toast('SAVE ERROR: '+e.message,'err'); return; }
   }
-  hideResultsPanel();
+  // Swap footer to "what's next" state
+  document.getElementById('results-footer').innerHTML = `
+    <div class="results-whats-next">
+      <div class="results-whats-next-label">✓ Results saved — what's next?</div>
+      <div class="results-whats-next-btns">
+        <button class="btn-results-keep" onclick="hideResultsPanel()">KEEP EDITING</button>
+        <button class="btn-results-next" onclick="hideResultsPanel(); addMatch();">+ LOAD NEXT MATCH</button>
+      </div>
+    </div>`;
 }
 
-function hideResultsPanel(){ document.getElementById('results-panel').classList.remove('show'); }
+function hideResultsPanel(){
+  document.getElementById('results-panel').classList.remove('show');
+  // Reset footer back to save button for next time
+  document.getElementById('results-footer').innerHTML =
+    '<button class="btn-results-save" onclick="saveMatchResults()">SAVE RESULTS</button>';
+}
 
 // ══════════════════════════════════════════════════════
 // ANNOTATIONS
