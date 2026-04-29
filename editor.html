@@ -1811,6 +1811,19 @@ async function loadMatchPlayers(matchId) {
 // ══════════════════════════════════════════════════════
 let _apmSelectedIds = new Set(); // player_id → selected
 let _apmAllPlayers  = [];        // [{id, name, role}] from tournament_players
+// Persisted to localStorage so the auto-pop guard survives page reloads.
+// Without this, _apmAutoShownForMatches was a plain Set that reset every session,
+// causing the "choose players again" modal to fire on every visit to an existing match.
+const _APM_LS_KEY = 'mz_apm_shown_v1';
+function _apmIsShown(matchId) {
+  try { return (JSON.parse(localStorage.getItem(_APM_LS_KEY)||'[]')).includes(matchId); } catch { return false; }
+}
+function _apmMarkShown(matchId) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(_APM_LS_KEY)||'[]');
+    if(!arr.includes(matchId)) { arr.push(matchId); localStorage.setItem(_APM_LS_KEY, JSON.stringify(arr.slice(-200))); }
+  } catch {}
+}
 
 async function openActivePlayersModal(matchId) {
   if(!sb||!matchId||!currentUser) return;
@@ -1897,15 +1910,29 @@ async function openActivePlayersModal(matchId) {
     console.error('[ACTIVE_SQUAD] unexpected error:', e);
   }
 
-  // Pre-select players already registered as match_players so the user
-  // can see what the current active squad is when the button is clicked.
+  // Pre-select players already registered as match_players.
+  // Always query fresh from DB here rather than relying on the in-memory matchPlayers
+  // array, which may be empty if loadMatchPlayers was skipped or failed on page load.
   try {
-    if(matchPlayers && matchPlayers.length) {
-      matchPlayers.forEach(mp => {
-        if(mp.player_id) _apmSelectedIds.add(mp.player_id);
-      });
+    let {data:mpRows} = await sb.from('match_players')
+      .select('player_id')
+      .eq('match_id', mid)
+      .eq('user_id', currentUser.id);
+    // Fallback without user_id filter (handles rows saved before user_id was set)
+    if(!mpRows || mpRows.length === 0) {
+      const fb = await sb.from('match_players').select('player_id').eq('match_id', mid);
+      if(!fb.error && fb.data) mpRows = fb.data;
     }
-  } catch(e) {}
+    if(mpRows && mpRows.length) {
+      mpRows.forEach(r => { if(r.player_id) _apmSelectedIds.add(r.player_id); });
+      // Sync in-memory matchPlayers so Self Loss / Self Elim buttons work immediately
+      // if they were empty due to a failed initial load.
+      if(matchPlayers.length === 0) await loadMatchPlayers(mid);
+    }
+  } catch(e) {
+    // Non-fatal — pre-selection just won't show existing squad
+    console.warn('[ACTIVE_SQUAD] pre-selection fetch failed:', e);
+  }
 
   _renderApmPlayers();
 }
@@ -3116,8 +3143,11 @@ async function _activateMatch(match, statusMsg) {
   annotations = [];
   await loadAnnotations(state.matchId);
   await loadMatchPlayers(state.matchId);
-  // [C3] If no players registered for this match yet → prompt to select squad
-  if(matchPlayers.length === 0 && state.tournamentId) {
+  // [C3] If no players registered for this match yet → prompt to select squad.
+  // Guard is persisted to localStorage so revisiting an existing match across
+  // sessions never re-triggers the modal even if matchPlayers failed to load.
+  if(matchPlayers.length === 0 && state.tournamentId && !_apmIsShown(state.matchId)) {
+    _apmMarkShown(state.matchId);
     openActivePlayersModal(state.matchId);
   }
   // [FIX] Preload known teams for autocomplete
