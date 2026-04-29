@@ -510,7 +510,15 @@
       <!-- ── TOP BAR: Tournament name + filters ── -->
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap;">
         <div>
-          <p class="font-mono" style="font-size:9px;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:6px;">TOURNAMENT INTELLIGENCE</p>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <p class="font-mono" style="font-size:9px;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;">TOURNAMENT INTELLIGENCE</p>
+            <a href="tournament-editor.html" class="btn-secondary" style="padding:4px 10px;font-size:9px;gap:5px;">
+              <iconify-icon icon="lucide:arrow-left" style="font-size:11px;"></iconify-icon> EDITOR
+            </a>
+            <a href="history.html" class="btn-secondary" style="padding:4px 10px;font-size:9px;gap:5px;">
+              <iconify-icon icon="lucide:history" style="font-size:11px;"></iconify-icon> ALL TOURNAMENTS
+            </a>
+          </div>
           <h1 class="font-display" id="tournament-name-display" style="font-size:28px;font-weight:800;letter-spacing:-0.02em;">—</h1>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
