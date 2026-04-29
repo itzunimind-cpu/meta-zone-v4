@@ -3651,10 +3651,25 @@ async function confirmWipe() {
   //   B) Enemy wiped → 1 enemy remains, self already out → last enemy = #1, match end
   //   C) Enemy wiped → 0 enemies remain, self alive      → self = #1, match end
   if(!_wipeIsSelf && state.matchId) {
-    const matchTeams     = teams.filter(t => t.match_id === state.matchId);
+    const matchTeams       = teams.filter(t => t.match_id === state.matchId);
     const survivingEnemies = matchTeams.filter(t => !t.is_self && t.time_of_wipe == null);
-    const selfTeam       = matchTeams.find(t => t.is_self);
-    const selfAlive      = selfTeam && selfTeam.time_of_wipe == null;
+    const selfTeam         = matchTeams.find(t => t.is_self);
+    const selfAlive        = selfTeam && selfTeam.time_of_wipe == null;
+
+    // Helper: if match was previously ended (e.g. from a prior auto-end that was then
+    // partially undone), clear duration_seconds so markMatchEnd() always goes into the
+    // SET path, not the UNDO path.
+    async function _clearMatchEndIfSet() {
+      const m = matches.find(x => x.id === state.matchId);
+      if(m?.duration_seconds != null) {
+        m.duration_seconds = null;
+        document.getElementById('match-meta-duration').textContent = '—';
+        annotations = annotations.filter(a => !a.id?.startsWith('local_matchend_'));
+        if(sb && !String(state.matchId).startsWith('local_')){
+          await sb.from('matches').update({duration_seconds:null}).eq('id', state.matchId);
+        }
+      }
+    }
 
     // Scenario C — no enemies left, self still alive → self wins
     if(survivingEnemies.length === 0 && selfAlive) {
@@ -3664,6 +3679,7 @@ async function confirmWipe() {
       }
       toast(`🏆 SELF wins — marked #1, ending match…`, 'ok');
       renderTimelineTicks(); renderAnnotationLog({scrollToTop:true});
+      await _clearMatchEndIfSet();
       setTimeout(()=>markMatchEnd(), 600);
 
     // Scenario A — 1 enemy left, self alive → enemy wins, self is #2
@@ -3680,6 +3696,7 @@ async function confirmWipe() {
       }
       toast(`🏆 ${winner.name} marked #1 · SELF marked #2 — ending match…`, 'ok');
       renderTimelineTicks(); renderAnnotationLog({scrollToTop:true});
+      await _clearMatchEndIfSet();
       setTimeout(()=>markMatchEnd(), 600);
 
     // Scenario B — 1 enemy left, self already wiped → that enemy is the winner
@@ -3692,6 +3709,7 @@ async function confirmWipe() {
       }
       toast(`🏆 ${winner.name} marked #1 — ending match…`, 'ok');
       renderTimelineTicks(); renderAnnotationLog({scrollToTop:true});
+      await _clearMatchEndIfSet();
       setTimeout(()=>markMatchEnd(), 600);
     }
   }
