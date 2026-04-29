@@ -1755,13 +1755,21 @@ async function loadMatchPlayers(matchId) {
       .eq('match_id', matchId)
       .eq('user_id', currentUser.id)
       .order('created_at');
-    // Fallback: try without user_id filter
-    if((!data || data.length === 0) && !error) {
+    // Fallback: try without user_id filter if primary returned nothing (error or empty)
+    // This handles revisiting old matches where user_id may differ or be null
+    if(error || !data || data.length === 0) {
+      if(error) console.warn('[MATCH_PLAYERS] primary query failed, trying fallback:', error);
       const fb = await sb.from('match_players')
         .select('id, player_id, kills, damage, time_of_loss, user_id, created_at')
         .eq('match_id', matchId)
         .order('created_at');
-      if(!fb.error && fb.data) { data = fb.data; error = null; }
+      if(!fb.error && fb.data && fb.data.length > 0) {
+        data = fb.data; error = null;
+        console.log('[MATCH_PLAYERS] fallback succeeded, found', data.length, 'rows');
+      } else if(fb.error) {
+        console.error('[MATCH_PLAYERS] fallback also failed:', fb.error);
+        return;
+      }
     }
     if(error) {
       console.error('[MATCH_PLAYERS] query failed:', error);
@@ -3168,8 +3176,9 @@ document.getElementById('sel-match').onchange=async function(){
     const m=matches.find(x=>x.id===state.matchId);
     if(m?.map_key){ state.mapKey=m.map_key; document.getElementById('sel-map').value=m.map_key; loadMapKey(m.map_key); }
     setMapDisplayMode(true);
-    const firstTeam=teams.find(t=>t.match_id===state.matchId);
-    state.activeTeamId=firstTeam?.id||null;
+    const matchTeams=teams.filter(t=>t.match_id===state.matchId);
+    const selfTeam=matchTeams.find(t=>t.is_self)||matchTeams[0];
+    state.activeTeamId=selfTeam?.id||null;
     if(sb&&state.matchId) await loadShapesForMatch(state.matchId);
     // Update timeline max if match has duration
     if(m?.duration_seconds){
@@ -3179,9 +3188,11 @@ document.getElementById('sel-match').onchange=async function(){
   } else {
     setMapDisplayMode(false);
   }
-  renderTeamList(); draw(); updateRightPanel();
   await loadAnnotations(state.matchId);
   await loadMatchPlayers(state.matchId);
+  // Render after all async data (matchPlayers, annotations) is fully loaded
+  renderTeamList(); draw(); updateRightPanel();
+  renderAnnotationLog();
   renderTimelineTicks();
 };
 
