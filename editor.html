@@ -1480,6 +1480,21 @@ canvas.path-mode{ cursor:cell; }
 'use strict';
 
 // ══════════════════════════════════════════════════════
+// CORE UTILITIES (defined first so all other code can use them)
+// ══════════════════════════════════════════════════════
+// HTML-escape helper. Assigned to a top-level `var` so it's available
+// even before its line position in any unusual hoisting/parse situation.
+var esc = function(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+};
+
+// ══════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════
 const SUPA_URL = 'https://qsiqgtdgpcyishtayqhy.supabase.co';
@@ -1693,7 +1708,16 @@ async function loadAnnotations(matchId) {
   if(!sb||!matchId) { annotations=[]; renderAnnotationLog(); return; }
   try {
     const {data,error}=await sb.from('annotations').select('*').eq('match_id',matchId).order('time_seconds');
-    if(error) throw error;
+    if(error) {
+      // 404 / table-missing is non-fatal — annotations are optional notes,
+      // and ephemeral self-loss / self-elim entries live only in memory.
+      if(error.code === 'PGRST116' || /not.*found|does not exist/i.test(error.message||'')) {
+        console.warn('[ANNOTATIONS] table not found — skipping (non-fatal). Run the annotations CREATE TABLE if you want to persist notes.');
+      } else {
+        console.error('[ANNOTATIONS] load failed:', error);
+      }
+      annotations=[]; renderAnnotationLog(); return;
+    }
     annotations = data || [];
     renderAnnotationLog();
   } catch(e) {
@@ -2052,6 +2076,9 @@ function toast(msg, type='info') {
   container.appendChild(el);
   setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),350); },2500);
 }
+
+// HTML-escape helper — defined at the top of the script as `var esc`.
+// (See top of file.)
 
 // ══════════════════════════════════════════════════════
 // MAP SYSTEM
