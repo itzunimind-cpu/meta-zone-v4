@@ -3644,6 +3644,57 @@ async function confirmWipe() {
   const posLabel = pos ? ` — #${pos}` : '';
   toast(`${_wipeIsSelf?'☠ SELF':'⚑ '+team.name} wiped at ${fmtTime(state.time)}${posLabel}`, 'ok');
   renderTimelineTicks(); renderAnnotationLog({scrollToTop:true}); updateSelfButtonState();
+
+  // ── AUTO MATCH END: check if only 1 team is left standing after this wipe ──
+  // Covers 3 scenarios:
+  //   A) Enemy wiped → 1 enemy remains, self alive       → last enemy = #1, self = #2, match end
+  //   B) Enemy wiped → 1 enemy remains, self already out → last enemy = #1, match end
+  //   C) Enemy wiped → 0 enemies remain, self alive      → self = #1, match end
+  if(!_wipeIsSelf && state.matchId) {
+    const matchTeams     = teams.filter(t => t.match_id === state.matchId);
+    const survivingEnemies = matchTeams.filter(t => !t.is_self && t.time_of_wipe == null);
+    const selfTeam       = matchTeams.find(t => t.is_self);
+    const selfAlive      = selfTeam && selfTeam.time_of_wipe == null;
+
+    // Scenario C — no enemies left, self still alive → self wins
+    if(survivingEnemies.length === 0 && selfAlive) {
+      selfTeam.confirmed_position = 1;
+      if(sb && !String(selfTeam.id).startsWith('local_')){
+        await sb.from('teams').update({confirmed_position:1}).eq('id', selfTeam.id);
+      }
+      toast(`🏆 SELF wins — marked #1, ending match…`, 'ok');
+      renderTimelineTicks(); renderAnnotationLog({scrollToTop:true});
+      setTimeout(()=>markMatchEnd(), 600);
+
+    // Scenario A — 1 enemy left, self alive → enemy wins, self is #2
+    } else if(survivingEnemies.length === 1 && selfAlive) {
+      const winner = survivingEnemies[0];
+      winner.confirmed_position = 1;
+      winner.time_of_wipe = state.time;
+      if(sb && !String(winner.id).startsWith('local_')){
+        await sb.from('teams').update({confirmed_position:1, time_of_wipe:state.time}).eq('id', winner.id);
+      }
+      selfTeam.confirmed_position = 2;
+      if(sb && !String(selfTeam.id).startsWith('local_')){
+        await sb.from('teams').update({confirmed_position:2}).eq('id', selfTeam.id);
+      }
+      toast(`🏆 ${winner.name} marked #1 · SELF marked #2 — ending match…`, 'ok');
+      renderTimelineTicks(); renderAnnotationLog({scrollToTop:true});
+      setTimeout(()=>markMatchEnd(), 600);
+
+    // Scenario B — 1 enemy left, self already wiped → that enemy is the winner
+    } else if(survivingEnemies.length === 1 && !selfAlive) {
+      const winner = survivingEnemies[0];
+      winner.confirmed_position = 1;
+      winner.time_of_wipe = state.time;
+      if(sb && !String(winner.id).startsWith('local_')){
+        await sb.from('teams').update({confirmed_position:1, time_of_wipe:state.time}).eq('id', winner.id);
+      }
+      toast(`🏆 ${winner.name} marked #1 — ending match…`, 'ok');
+      renderTimelineTicks(); renderAnnotationLog({scrollToTop:true});
+      setTimeout(()=>markMatchEnd(), 600);
+    }
+  }
 }
 
 function markSelfWipe() {
