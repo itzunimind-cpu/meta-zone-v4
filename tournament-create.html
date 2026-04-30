@@ -719,6 +719,17 @@ function selectCycle(cycle) {
   updateEventSummary();
 }
 
+function reviewEventHtml() {
+  if (!eventAssignEnabled || !selectedEventId || !selectedStage) return '';
+  const ev = allEvents.find(e => e.id === selectedEventId);
+  const stageLabel = STAGES.find(s => s.value === selectedStage)?.label || selectedStage;
+  const cycleLabel = selectedCycle ? ' — Cycle ' + selectedCycle : '';
+  return '<div>' +
+    '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Event</div>' +
+    '<div style="font-size:13px;font-weight:700;color:var(--accent);">' + esc(ev?.name||'') + ' · ' + stageLabel + cycleLabel + '</div>' +
+    '</div>';
+}
+
 function updateEventSummary() {
   const wrap = document.getElementById('event-summary-wrap');
   const chip = document.getElementById('event-summary-chip');
@@ -1121,16 +1132,7 @@ function renderReview() {
           <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Game</div>
           <div style="font-size:14px;font-weight:700;color:var(--text);">BGMI — Battle Royale</div>
         </div>
-        ${(()=>{
-          if (!eventAssignEnabled || !selectedEventId || !selectedStage) return '';
-          const ev = allEvents.find(e => e.id === selectedEventId);
-          const stageLabel = STAGES.find(s => s.value === selectedStage)?.label || selectedStage;
-          const cycleLabel = selectedCycle ? ' — Cycle ' + selectedCycle : '';
-          return \`<div>
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Event</div>
-            <div style="font-size:13px;font-weight:700;color:var(--accent);">\${esc(ev?.name||'')} · \${stageLabel}\${cycleLabel}</div>
-          </div>\`;
-        })()}
+        ${reviewEventHtml()}
       </div>
     </div>
   `;
