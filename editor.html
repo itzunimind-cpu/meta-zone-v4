@@ -375,6 +375,37 @@ canvas.path-mode{ cursor:cell; }
 }
 #path-indicator.show{ display:block; }
 
+/* ── PIN PROMPT OVERLAY (death/wipe position capture) ── */
+#pin-prompt-overlay{
+  position:absolute;inset:0;z-index:350;display:none;
+  cursor:crosshair;
+}
+#pin-prompt-overlay.show{ display:block; }
+#pin-prompt-banner{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(2,6,23,.95);border:1px solid var(--yellow);border-radius:6px;
+  padding:8px 16px;display:flex;align-items:center;gap:12px;pointer-events:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:nowrap;
+}
+#pin-prompt-banner.wipe-mode{ border-color:var(--orange); }
+.ppb-icon{ font-size:16px; }
+.ppb-text{ font-family:var(--font-mono);font-size:10px;color:var(--text);letter-spacing:.08em; }
+.ppb-text span{ color:var(--yellow); }
+#pin-prompt-banner.wipe-mode .ppb-text span{ color:var(--orange); }
+#pin-prompt-skip{
+  pointer-events:all;cursor:pointer;
+  font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(71,85,105,.2);border:1px solid var(--border);border-radius:4px;
+  padding:3px 10px;transition:all .15s;
+}
+#pin-prompt-skip:hover{ color:var(--text);border-color:var(--border-dim); }
+/* Ghost crosshair that follows cursor */
+#pin-cursor-ghost{
+  position:absolute;pointer-events:none;display:none;
+  width:20px;height:20px;transform:translate(-50%,-50%);
+}
+#pin-prompt-overlay.show #pin-cursor-ghost{ display:block; }
+
 /* hover tooltip */
 #hover-tip{
   position:absolute;background:rgba(2,6,23,.97);border:1px solid var(--border);
@@ -1218,7 +1249,24 @@ canvas.path-mode{ cursor:cell; }
       <div id="hover-tip"></div>
       <div id="toast-container"></div>
 
-      <!-- Pin popup -->
+      <!-- Death/Wipe position pin prompt overlay -->
+      <div id="pin-prompt-overlay">
+        <div id="pin-prompt-banner">
+          <span class="ppb-icon">📍</span>
+          <span class="ppb-text"><span id="ppb-label">TAP LOCATION ON MAP</span> to pin death position</span>
+          <button id="pin-prompt-skip" onclick="skipPinPrompt()">SKIP</button>
+        </div>
+        <!-- SVG crosshair ghost -->
+        <div id="pin-cursor-ghost">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="10" cy="10" r="4" stroke="#f87171" stroke-width="1.5"/>
+            <line x1="10" y1="0" x2="10" y2="7" stroke="#f87171" stroke-width="1.5"/>
+            <line x1="10" y1="13" x2="10" y2="20" stroke="#f87171" stroke-width="1.5"/>
+            <line x1="0" y1="10" x2="7" y2="10" stroke="#f87171" stroke-width="1.5"/>
+            <line x1="13" y1="10" x2="20" y2="10" stroke="#f87171" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
       <div id="pin-popup">
         <div id="pp-normal"><input class="pp-input" id="pp-label" placeholder="Team / note..." maxlength="30"></div>
         <div id="pp-fight" style="display:none;flex-direction:column;gap:7px;">
@@ -1566,6 +1614,10 @@ let panSX=0, panSY=0, panPX=0, panPY=0;
 let drawing=false, circleP1=null, dSX=0, dSY=0, preview=null;
 let pathPoints=[], pathDrawing=false;
 let pendingPin=null, cpTeamId=null;
+
+// ── PIN PROMPT STATE (death/wipe position capture) ──
+let _pinPromptActive = false;
+let _pinPromptCallback = null; // fn(wx, wy) called on tap, or null on skip
 
 const TEAM_COLORS=[
   '#22d3ee','#4ade80','#f87171','#fb923c','#facc15',
@@ -2336,6 +2388,15 @@ function resizeCanvas() {
 // ══════════════════════════════════════════════════════
 function onPointerDown(e) {
   e.preventDefault(); closeColorPicker();
+
+  // ── PIN PROMPT intercept — if active, this click places the death/wipe pin ──
+  if (_pinPromptActive) {
+    // Only intercept single touches / mouse, not pinch
+    if (!e.touches || e.touches.length === 1) {
+      _handlePinPromptClick(e);
+      return;
+    }
+  }
 
   // E2: Two-finger pinch → start pinch mode, cancel any drawing
   if(e.touches&&e.touches.length===2){
@@ -3705,6 +3766,17 @@ async function confirmWipe() {
   toast(`${_wipeIsSelf?'☠ SELF':'⚑ '+team.name} wiped at ${fmtTime(state.time)}${posLabel}`, 'ok');
   renderTimelineTicks(); renderAnnotationLog({scrollToTop:true}); updateSelfButtonState();
 
+  // ── PIN PROMPT: ask user to tap wipe location on map ──
+  if(sb && !String(team.id).startsWith('local_')) {
+    const label = _wipeIsSelf ? 'SELF wipe location' : `${team.name} wipe location`;
+    openPinPrompt(label, true, async (wx, wy) => {
+      try {
+        await sb.from('teams').update({ wipe_x: wx, wipe_y: wy }).eq('id', team.id);
+        toast(`📍 ${_wipeIsSelf ? 'Self' : team.name} wipe pinned`, 'ok');
+      } catch(e) { console.warn('[PLAYER_ANALYTICS] wipe pin save failed:', e); }
+    });
+  }
+
   // ── AUTO MATCH END: check if only 1 team is left standing after this wipe ──
   // Covers 3 scenarios:
   //   A) Enemy wiped → 1 enemy remains, self alive       → last enemy = #1, self = #2, match end
@@ -3920,6 +3992,16 @@ async function confirmSelfLoss() {
   const killedByTeam = killedByTeamId ? teams.find(t=>t.id===killedByTeamId) : null;
   toast(`💀 ${player.name} down${killedByTeam ? ` — killed by ${killedByTeam.name}` : ''}`, 'ok');
 
+  // ── PIN PROMPT: ask user to tap death location on map ──
+  if(sb && !String(player.id).startsWith('local_')) {
+    openPinPrompt(`${player.name} death`, false, async (wx, wy) => {
+      try {
+        await sb.from('match_players').update({ death_x: wx, death_y: wy }).eq('id', player.id);
+        toast(`📍 ${player.name} death pinned`, 'ok');
+      } catch(e) { console.warn('[PLAYER_ANALYTICS] death pin save failed:', e); }
+    });
+  }
+
   // If last alive player → auto-trigger Self Wipe
   const stillAlive = matchPlayers.filter(p => p.time_of_loss == null || p.time_of_loss > state.time);
   if(stillAlive.length === 0) {
@@ -3932,6 +4014,70 @@ function closeSelfLossModal() {
   document.getElementById('self-loss-modal').classList.remove('show');
   slmSelectedPlayerId = null;
 }
+
+// ══════════════════════════════════════════════════════
+// PIN PROMPT — death/wipe position capture
+// ══════════════════════════════════════════════════════
+function openPinPrompt(label, isWipe, callback) {
+  _pinPromptActive = true;
+  _pinPromptCallback = callback;
+  const overlay = document.getElementById('pin-prompt-overlay');
+  const banner = document.getElementById('pin-prompt-banner');
+  document.getElementById('ppb-label').textContent = label;
+  banner.className = isWipe ? 'wipe-mode' : '';
+  // Update SVG crosshair color
+  const svg = overlay.querySelector('svg');
+  const col = isWipe ? '#fb923c' : '#f87171';
+  svg.querySelectorAll('circle,line').forEach(el => el.setAttribute('stroke', col));
+  overlay.classList.add('show');
+}
+
+function skipPinPrompt() {
+  _pinPromptActive = false;
+  _pinPromptCallback = null;
+  document.getElementById('pin-prompt-overlay').classList.remove('show');
+}
+
+function _handlePinPromptClick(e) {
+  if (!_pinPromptActive) return false;
+  const rect = canvas.getBoundingClientRect();
+  let cx, cy;
+  if (e.touches?.length) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+  else { cx = e.clientX; cy = e.clientY; }
+  const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+  const sx = (cx - rect.left) * scaleX, sy = (cy - rect.top) * scaleY;
+  const {x: wx, y: wy} = s2w(sx, sy);
+
+  const cb = _pinPromptCallback;
+  skipPinPrompt();
+  if (cb) cb(wx, wy);
+  return true;
+}
+
+// Mouse move → move the ghost crosshair
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('pin-prompt-overlay');
+  const ghost = document.getElementById('pin-cursor-ghost');
+  overlay.addEventListener('click', e => {
+    if (e.target.id === 'pin-prompt-skip') return; // skip btn handled separately
+    _handlePinPromptClick(e);
+  });
+  overlay.addEventListener('touchend', e => {
+    if (e.target.id === 'pin-prompt-skip') return;
+    _handlePinPromptClick(e);
+  }, { passive: false });
+  overlay.addEventListener('mousemove', e => {
+    const rect = overlay.getBoundingClientRect();
+    ghost.style.left = (e.clientX - rect.left) + 'px';
+    ghost.style.top = (e.clientY - rect.top) + 'px';
+  });
+  overlay.addEventListener('touchmove', e => {
+    if (!e.touches.length) return;
+    const rect = overlay.getBoundingClientRect();
+    ghost.style.left = (e.touches[0].clientX - rect.left) + 'px';
+    ghost.style.top = (e.touches[0].clientY - rect.top) + 'px';
+  }, { passive: true });
+});
 
 async function markMatchEnd() {
   if(!state.matchId){ toast('SELECT A MATCH FIRST','warn'); return; }
