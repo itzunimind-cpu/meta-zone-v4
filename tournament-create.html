@@ -180,6 +180,37 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 /* Divider */
 .section-divider{height:1px;background:var(--border);margin:40px 0;max-width:600px;}
 
+/* Event assignment */
+.event-section{margin-top:40px;max-width:600px;}
+.event-toggle{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;margin-bottom:0;}
+.event-toggle-box{width:20px;height:20px;border:1px solid var(--border);border-radius:5px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.event-toggle-box.checked{background:var(--accent);border-color:var(--accent);}
+.event-toggle-box iconify-icon{font-size:12px;color:#020617;opacity:0;transition:opacity .2s;}
+.event-toggle-box.checked iconify-icon{opacity:1;}
+.event-toggle-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.event-fields{margin-top:24px;display:none;flex-direction:column;gap:20px;}
+.event-fields.show{display:flex;}
+.event-sub-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;display:block;margin-bottom:10px;}
+.event-picker{display:flex;flex-direction:column;gap:8px;}
+.event-option-row{display:flex;gap:8px;align-items:center;}
+.event-select{flex:1;padding:11px 14px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:14px;outline:none;transition:border-color .2s;cursor:pointer;}
+.event-select:focus{border-color:var(--accent);}
+.event-select option{background:var(--bg-card);}
+.btn-new-event{padding:11px 16px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--font-mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.btn-new-event:hover{border-color:var(--accent);color:var(--accent);}
+.new-event-form{display:none;flex-direction:column;gap:8px;}
+.new-event-form.show{display:flex;}
+.new-event-row{display:flex;gap:8px;}
+.stage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.stage-opt{padding:10px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.stage-opt:hover{border-color:rgba(34,211,238,.3);color:var(--text);}
+.stage-opt.sel{border-color:var(--accent);background:rgba(34,211,238,.08);color:var(--accent);}
+.cycle-row{display:flex;gap:8px;}
+.cycle-btn{flex:1;padding:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+.cycle-btn:hover{border-color:rgba(34,211,238,.3);color:var(--text);}
+.cycle-btn.sel{border-color:var(--accent);background:rgba(34,211,238,.08);color:var(--accent);font-weight:700;}
+.event-summary-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.2);border-radius:6px;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:1px;margin-top:8px;}
+
 /* Toast */
 #toast{position:fixed;bottom:90px;right:28px;padding:12px 20px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text);z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
 #toast.show{opacity:1;transform:translateY(0);}
@@ -315,6 +346,60 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
         <div class="step-accent-bar"></div>
         <label class="field-label" for="tc-name">Tournament Identifier</label>
         <input id="tc-name" class="field-input" type="text" placeholder="e.g. BGMI Pro Series — Season 4" maxlength="120" />
+
+        <!-- EVENT ASSIGNMENT -->
+        <div class="event-section">
+          <div class="event-toggle" onclick="toggleEventAssign()">
+            <div class="event-toggle-box" id="event-toggle-box">
+              <iconify-icon icon="lucide:check"></iconify-icon>
+            </div>
+            <span class="event-toggle-label">Assign to an Event</span>
+          </div>
+
+          <div class="event-fields" id="event-fields">
+            <div>
+              <span class="event-sub-label">Event</span>
+              <div class="event-option-row">
+                <select class="event-select" id="event-select" onchange="onEventSelectChange()">
+                  <option value="">Select event…</option>
+                </select>
+                <button class="btn-new-event" onclick="toggleNewEventForm()">+ NEW EVENT</button>
+              </div>
+              <div class="new-event-form" id="new-event-form">
+                <div class="new-event-row" style="margin-top:10px;">
+                  <input id="new-event-name" class="field-input" type="text" placeholder="Event name e.g. BGMI Masters S1" maxlength="120" style="flex:1;" />
+                  <button class="team-add-btn" onclick="createNewEvent()" style="flex-shrink:0;">CREATE</button>
+                  <button class="btn-new-event" onclick="cancelNewEventForm()">CANCEL</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="stage-section">
+              <span class="event-sub-label">Stage</span>
+              <div class="stage-grid" id="stage-grid">
+                <div class="stage-opt" data-stage="qualifiers" onclick="selectStage('qualifiers')">Qualifiers</div>
+                <div class="stage-opt" data-stage="group_stage" onclick="selectStage('group_stage')">Group Stage</div>
+                <div class="stage-opt" data-stage="last_chance" onclick="selectStage('last_chance')">Last Chance</div>
+                <div class="stage-opt" data-stage="semi_finals" onclick="selectStage('semi_finals')">Semi Finals</div>
+                <div class="stage-opt" data-stage="finals" onclick="selectStage('finals')">Finals</div>
+              </div>
+            </div>
+
+            <div id="cycle-section" style="display:none;">
+              <span class="event-sub-label">Cycle</span>
+              <div class="cycle-row">
+                <div class="cycle-btn" data-cycle="1" onclick="selectCycle(1)">Cycle 1</div>
+                <div class="cycle-btn" data-cycle="2" onclick="selectCycle(2)">Cycle 2</div>
+                <div class="cycle-btn" data-cycle="3" onclick="selectCycle(3)">Cycle 3</div>
+                <div class="cycle-btn" data-cycle="4" onclick="selectCycle(4)">Cycle 4</div>
+              </div>
+            </div>
+
+            <div id="event-summary-wrap" style="display:none;">
+              <div class="event-summary-chip" id="event-summary-chip"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- STEP 2: Format -->
@@ -474,6 +559,21 @@ let knownTeams = []; // preloaded team names for instant autocomplete
 let squadPlayers = []; // [{id, name, role}] selected players for this tournament
 let allPlayers = [];  // [{id, name, role}] from players table
 
+// EVENT ASSIGNMENT STATE
+let eventAssignEnabled = false;
+let allEvents = []; // [{id, name}] loaded from DB
+let selectedEventId = null;
+let selectedStage = null; // 'qualifiers'|'group_stage'|'last_chance'|'semi_finals'|'finals'
+let selectedCycle = null; // 1-4, only when group_stage
+
+const STAGES = [
+  { value: 'qualifiers',  label: 'Qualifiers' },
+  { value: 'group_stage', label: 'Group Stage' },
+  { value: 'last_chance', label: 'Last Chance' },
+  { value: 'semi_finals', label: 'Semi Finals' },
+  { value: 'finals',      label: 'Finals' },
+];
+
 // ──────────────────────────────────────────────
 // AUTH
 // ──────────────────────────────────────────────
@@ -493,12 +593,6 @@ async function signOut() {
   await sb.auth.signOut();
   window.location.reload();
 }
-function resetLocalState() {
-  currentUser = null;
-  currentStep = 1; teamMode = null; poolTeams = []; groups = [];
-  squadPlayers = []; allPlayers = [];
-}
-
 // ──────────────────────────────────────────────
 // INIT
 // ──────────────────────────────────────────────
@@ -539,7 +633,109 @@ async function init() {
     const { data, error } = await sb.from('players').select('id, name, role').eq('user_id', currentUser.id).order('name');
     if (!error && data) allPlayers = data;
   } catch(e) {}
+  await loadEvents();
   renderStep(1);
+}
+
+// ──────────────────────────────────────────────
+// EVENT ASSIGNMENT
+// ──────────────────────────────────────────────
+async function loadEvents() {
+  try {
+    const { data, error } = await sb.from('events').select('id, name').eq('user_id', currentUser.id).order('created_at');
+    if (!error && data) {
+      allEvents = data;
+      populateEventSelect();
+    }
+  } catch(e) {}
+}
+
+function populateEventSelect() {
+  const sel = document.getElementById('event-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Select event…</option>';
+  allEvents.forEach(ev => {
+    const opt = document.createElement('option');
+    opt.value = ev.id;
+    opt.textContent = ev.name;
+    if (ev.id === selectedEventId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function toggleEventAssign() {
+  eventAssignEnabled = !eventAssignEnabled;
+  document.getElementById('event-toggle-box').classList.toggle('checked', eventAssignEnabled);
+  const fields = document.getElementById('event-fields');
+  fields.classList.toggle('show', eventAssignEnabled);
+  if (!eventAssignEnabled) {
+    selectedEventId = null; selectedStage = null; selectedCycle = null;
+    updateEventSummary();
+  }
+}
+
+function onEventSelectChange() {
+  selectedEventId = document.getElementById('event-select').value || null;
+  updateEventSummary();
+}
+
+function toggleNewEventForm() {
+  const form = document.getElementById('new-event-form');
+  form.classList.add('show');
+  document.getElementById('new-event-name').focus();
+}
+
+function cancelNewEventForm() {
+  document.getElementById('new-event-form').classList.remove('show');
+  document.getElementById('new-event-name').value = '';
+}
+
+async function createNewEvent() {
+  const name = document.getElementById('new-event-name').value.trim();
+  if (!name) { toast('Enter an event name.', 'err'); return; }
+  const { data, error } = await sb.from('events').insert({ name, user_id: currentUser.id }).select('id, name').single();
+  if (error) { toast('Could not create event: ' + error.message, 'err'); return; }
+  allEvents.push(data);
+  selectedEventId = data.id;
+  populateEventSelect();
+  cancelNewEventForm();
+  toast('Event created: ' + data.name, 'ok');
+  updateEventSummary();
+}
+
+function selectStage(stage) {
+  selectedStage = stage;
+  document.querySelectorAll('.stage-opt').forEach(el => el.classList.toggle('sel', el.dataset.stage === stage));
+  // Show/hide cycle picker
+  const showCycle = stage === 'group_stage';
+  document.getElementById('cycle-section').style.display = showCycle ? 'block' : 'none';
+  if (!showCycle) { selectedCycle = null; document.querySelectorAll('.cycle-btn').forEach(el => el.classList.remove('sel')); }
+  updateEventSummary();
+}
+
+function selectCycle(cycle) {
+  selectedCycle = cycle;
+  document.querySelectorAll('.cycle-btn').forEach(el => el.classList.toggle('sel', parseInt(el.dataset.cycle) === cycle));
+  updateEventSummary();
+}
+
+function updateEventSummary() {
+  const wrap = document.getElementById('event-summary-wrap');
+  const chip = document.getElementById('event-summary-chip');
+  if (!eventAssignEnabled || !selectedEventId || !selectedStage) { wrap.style.display = 'none'; return; }
+  if (selectedStage === 'group_stage' && !selectedCycle) { wrap.style.display = 'none'; return; }
+  const ev = allEvents.find(e => e.id === selectedEventId);
+  const stageLabel = STAGES.find(s => s.value === selectedStage)?.label || selectedStage;
+  const cycleLabel = selectedCycle ? ` — Cycle ${selectedCycle}` : '';
+  chip.textContent = (ev?.name || '') + '  ·  ' + stageLabel + cycleLabel;
+  wrap.style.display = 'block';
+}
+
+function resetLocalState() {
+  currentUser = null;
+  currentStep = 1; teamMode = null; poolTeams = []; groups = [];
+  squadPlayers = []; allPlayers = [];
+  eventAssignEnabled = false; allEvents = []; selectedEventId = null; selectedStage = null; selectedCycle = null;
 }
 
 // ──────────────────────────────────────────────
@@ -925,6 +1121,16 @@ function renderReview() {
           <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Game</div>
           <div style="font-size:14px;font-weight:700;color:var(--text);">BGMI — Battle Royale</div>
         </div>
+        ${(()=>{
+          if (!eventAssignEnabled || !selectedEventId || !selectedStage) return '';
+          const ev = allEvents.find(e => e.id === selectedEventId);
+          const stageLabel = STAGES.find(s => s.value === selectedStage)?.label || selectedStage;
+          const cycleLabel = selectedCycle ? ' — Cycle ' + selectedCycle : '';
+          return \`<div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Event</div>
+            <div style="font-size:13px;font-weight:700;color:var(--accent);">\${esc(ev?.name||'')} · \${stageLabel}\${cycleLabel}</div>
+          </div>\`;
+        })()}
       </div>
     </div>
   `;
@@ -974,10 +1180,16 @@ async function confirmCreate() {
   const name = document.getElementById('tc-name').value.trim();
   const uid = currentUser.id;
 
-  // 1. Create tournament
+  // 1. Create tournament — include event assignment if set
+  const tInsert = { name, user_id: uid, team_mode: teamMode };
+  if (eventAssignEnabled && selectedEventId && selectedStage) {
+    tInsert.event_id = selectedEventId;
+    tInsert.stage = selectedStage;
+    if (selectedStage === 'group_stage' && selectedCycle) tInsert.cycle = selectedCycle;
+  }
   const { data: tData, error: tErr } = await sb
     .from('tournaments')
-    .insert({ name, user_id: uid, team_mode: teamMode })
+    .insert(tInsert)
     .select('id')
     .single();
   if (tErr) { handleCreateError(btn, tErr.message); return; }
