@@ -182,18 +182,24 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 
 /* Event assignment */
 .event-section{margin-top:40px;max-width:600px;}
-.event-toggle{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;margin-bottom:0;}
-.event-toggle-box{width:20px;height:20px;border:1px solid var(--border);border-radius:5px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
-.event-toggle-box.checked{background:var(--accent);border-color:var(--accent);}
-.event-toggle-box iconify-icon{font-size:12px;color:#020617;opacity:0;transition:opacity .2s;}
-.event-toggle-box.checked iconify-icon{opacity:1;}
-.event-toggle-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
-.event-fields{margin-top:24px;display:none;flex-direction:column;gap:20px;}
+.event-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s;}
+.event-card.active{border-color:var(--accent);box-shadow:0 0 24px rgba(34,211,238,.1);}
+.event-card-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;user-select:none;}
+.event-card-left{display:flex;align-items:center;gap:14px;}
+.event-card-icon{width:36px;height:36px;border-radius:8px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.15);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:18px;transition:all .2s;}
+.event-card.active .event-card-icon{background:rgba(34,211,238,.15);border-color:rgba(34,211,238,.3);}
+.event-card-title{font-family:var(--font-display);font-size:16px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;transition:color .2s;}
+.event-card.active .event-card-title{color:var(--text);}
+.event-card-sub{font-family:var(--font-mono);font-size:10px;color:var(--muted2);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.event-toggle-pill{display:flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--border);border-radius:20px;font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;transition:all .2s;}
+.event-card.active .event-toggle-pill{border-color:var(--accent);color:var(--accent);background:rgba(34,211,238,.08);}
+.event-toggle-dot{width:6px;height:6px;border-radius:50%;background:var(--muted2);transition:background .2s;}
+.event-card.active .event-toggle-dot{background:var(--accent);}
+.event-fields{padding:0 22px 22px;display:none;flex-direction:column;gap:20px;border-top:1px solid var(--border);}
 .event-fields.show{display:flex;}
 .event-sub-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;display:block;margin-bottom:10px;}
-.event-picker{display:flex;flex-direction:column;gap:8px;}
 .event-option-row{display:flex;gap:8px;align-items:center;}
-.event-select{flex:1;padding:11px 14px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:14px;outline:none;transition:border-color .2s;cursor:pointer;}
+.event-select{flex:1;padding:11px 14px;background:var(--bg-panel);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:14px;outline:none;transition:border-color .2s;cursor:pointer;}
 .event-select:focus{border-color:var(--accent);}
 .event-select option{background:var(--bg-card);}
 .btn-new-event{padding:11px 16px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--font-mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
@@ -201,15 +207,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 .new-event-form{display:none;flex-direction:column;gap:8px;}
 .new-event-form.show{display:flex;}
 .new-event-row{display:flex;gap:8px;}
-.stage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.stage-opt{padding:10px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.stage-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.stage-opt{padding:14px 6px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;line-height:1.4;}
 .stage-opt:hover{border-color:rgba(34,211,238,.3);color:var(--text);}
 .stage-opt.sel{border-color:var(--accent);background:rgba(34,211,238,.08);color:var(--accent);}
 .cycle-row{display:flex;gap:8px;}
-.cycle-btn{flex:1;padding:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+.cycle-btn{flex:1;padding:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--font-mono);font-size:11px;color:var(--muted);}
 .cycle-btn:hover{border-color:rgba(34,211,238,.3);color:var(--text);}
 .cycle-btn.sel{border-color:var(--accent);background:rgba(34,211,238,.08);color:var(--accent);font-weight:700;}
-.event-summary-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.2);border-radius:6px;font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:1px;margin-top:8px;}
+.event-summary-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.2);border-radius:6px;font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:1px;}
+.event-fields-inner{padding-top:20px;display:flex;flex-direction:column;gap:20px;}
 
 /* Toast */
 #toast{position:fixed;bottom:90px;right:28px;padding:12px 20px;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text);z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
@@ -349,54 +356,67 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 
         <!-- EVENT ASSIGNMENT -->
         <div class="event-section">
-          <div class="event-toggle" onclick="toggleEventAssign()">
-            <div class="event-toggle-box" id="event-toggle-box">
-              <iconify-icon icon="lucide:check"></iconify-icon>
-            </div>
-            <span class="event-toggle-label">Assign to an Event</span>
-          </div>
-
-          <div class="event-fields" id="event-fields">
-            <div>
-              <span class="event-sub-label">Event</span>
-              <div class="event-option-row">
-                <select class="event-select" id="event-select" onchange="onEventSelectChange()">
-                  <option value="">Select event…</option>
-                </select>
-                <button class="btn-new-event" onclick="toggleNewEventForm()">+ NEW EVENT</button>
-              </div>
-              <div class="new-event-form" id="new-event-form">
-                <div class="new-event-row" style="margin-top:10px;">
-                  <input id="new-event-name" class="field-input" type="text" placeholder="Event name e.g. BGMI Masters S1" maxlength="120" style="flex:1;" />
-                  <button class="team-add-btn" onclick="createNewEvent()" style="flex-shrink:0;">CREATE</button>
-                  <button class="btn-new-event" onclick="cancelNewEventForm()">CANCEL</button>
+          <div class="event-card" id="event-card" onclick="toggleEventAssign()">
+            <div class="event-card-header">
+              <div class="event-card-left">
+                <div class="event-card-icon">
+                  <iconify-icon icon="lucide:calendar-range"></iconify-icon>
+                </div>
+                <div>
+                  <div class="event-card-title">Part of an Event?</div>
+                  <div class="event-card-sub">Link this tournament to a series — Qualifiers, Group Stage, Finals…</div>
                 </div>
               </div>
-            </div>
-
-            <div id="stage-section">
-              <span class="event-sub-label">Stage</span>
-              <div class="stage-grid" id="stage-grid">
-                <div class="stage-opt" data-stage="qualifiers" onclick="selectStage('qualifiers')">Qualifiers</div>
-                <div class="stage-opt" data-stage="group_stage" onclick="selectStage('group_stage')">Group Stage</div>
-                <div class="stage-opt" data-stage="last_chance" onclick="selectStage('last_chance')">Last Chance</div>
-                <div class="stage-opt" data-stage="semi_finals" onclick="selectStage('semi_finals')">Semi Finals</div>
-                <div class="stage-opt" data-stage="finals" onclick="selectStage('finals')">Finals</div>
+              <div class="event-toggle-pill">
+                <div class="event-toggle-dot"></div>
+                <span id="event-toggle-label">OFF</span>
               </div>
             </div>
+          </div>
 
-            <div id="cycle-section" style="display:none;">
-              <span class="event-sub-label">Cycle</span>
-              <div class="cycle-row">
-                <div class="cycle-btn" data-cycle="1" onclick="selectCycle(1)">Cycle 1</div>
-                <div class="cycle-btn" data-cycle="2" onclick="selectCycle(2)">Cycle 2</div>
-                <div class="cycle-btn" data-cycle="3" onclick="selectCycle(3)">Cycle 3</div>
-                <div class="cycle-btn" data-cycle="4" onclick="selectCycle(4)">Cycle 4</div>
+          <div class="event-fields" id="event-fields" onclick="event.stopPropagation()">
+            <div class="event-fields-inner">
+              <div>
+                <span class="event-sub-label">Event</span>
+                <div class="event-option-row">
+                  <select class="event-select" id="event-select" onchange="onEventSelectChange()">
+                    <option value="">Select event…</option>
+                  </select>
+                  <button class="btn-new-event" onclick="event.stopPropagation();toggleNewEventForm()">+ NEW EVENT</button>
+                </div>
+                <div class="new-event-form" id="new-event-form">
+                  <div class="new-event-row" style="margin-top:10px;">
+                    <input id="new-event-name" class="field-input" type="text" placeholder="e.g. BGMI Masters Season 1" maxlength="120" style="flex:1;" onclick="event.stopPropagation()" />
+                    <button class="team-add-btn" onclick="event.stopPropagation();createNewEvent()" style="flex-shrink:0;">CREATE</button>
+                    <button class="btn-new-event" onclick="event.stopPropagation();cancelNewEventForm()">CANCEL</button>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div id="event-summary-wrap" style="display:none;">
-              <div class="event-summary-chip" id="event-summary-chip"></div>
+              <div id="stage-section">
+                <span class="event-sub-label">Stage</span>
+                <div class="stage-grid" id="stage-grid">
+                  <div class="stage-opt" data-stage="qualifiers" onclick="event.stopPropagation();selectStage('qualifiers')">Qualifiers</div>
+                  <div class="stage-opt" data-stage="group_stage" onclick="event.stopPropagation();selectStage('group_stage')">Group Stage</div>
+                  <div class="stage-opt" data-stage="last_chance" onclick="event.stopPropagation();selectStage('last_chance')">Last Chance</div>
+                  <div class="stage-opt" data-stage="semi_finals" onclick="event.stopPropagation();selectStage('semi_finals')">Semi Finals</div>
+                  <div class="stage-opt" data-stage="finals" onclick="event.stopPropagation();selectStage('finals')">Finals</div>
+                </div>
+              </div>
+
+              <div id="cycle-section" style="display:none;">
+                <span class="event-sub-label">Cycle</span>
+                <div class="cycle-row">
+                  <div class="cycle-btn" data-cycle="1" onclick="event.stopPropagation();selectCycle(1)">Cycle 1</div>
+                  <div class="cycle-btn" data-cycle="2" onclick="event.stopPropagation();selectCycle(2)">Cycle 2</div>
+                  <div class="cycle-btn" data-cycle="3" onclick="event.stopPropagation();selectCycle(3)">Cycle 3</div>
+                  <div class="cycle-btn" data-cycle="4" onclick="event.stopPropagation();selectCycle(4)">Cycle 4</div>
+                </div>
+              </div>
+
+              <div id="event-summary-wrap" style="display:none;">
+                <div class="event-summary-chip" id="event-summary-chip"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -665,11 +685,15 @@ function populateEventSelect() {
 
 function toggleEventAssign() {
   eventAssignEnabled = !eventAssignEnabled;
-  document.getElementById('event-toggle-box').classList.toggle('checked', eventAssignEnabled);
+  document.getElementById('event-card').classList.toggle('active', eventAssignEnabled);
+  document.getElementById('event-toggle-label').textContent = eventAssignEnabled ? 'ON' : 'OFF';
   const fields = document.getElementById('event-fields');
   fields.classList.toggle('show', eventAssignEnabled);
   if (!eventAssignEnabled) {
     selectedEventId = null; selectedStage = null; selectedCycle = null;
+    document.querySelectorAll('.stage-opt').forEach(el => el.classList.remove('sel'));
+    document.querySelectorAll('.cycle-btn').forEach(el => el.classList.remove('sel'));
+    document.getElementById('cycle-section').style.display = 'none';
     updateEventSummary();
   }
 }
