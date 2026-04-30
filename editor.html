@@ -2187,22 +2187,55 @@ function toast(msg, type='info') {
 // (See top of file.)
 
 // ══════════════════════════════════════════════════════
-// MAP SYSTEM
+// MAP SYSTEM — multi-resolution (lo/mid/hi per zoom)
 // ══════════════════════════════════════════════════════
 let mapImg = new Image();
 mapImg.crossOrigin='anonymous';
 
-const MAP_PATHS = {
-  erangel:'Erangel.png', miramar:'Miramar.png', rondo:'RONDO.jpg', sanhok:'sanhok.png',
+const MAP_SRCS = {
+  erangel: { lo:'erangel_lo.jpg', mid:'erangel_mid.jpg', hi:'erangel_hi.jpg' },
+  miramar: { lo:'miramar_lo.jpg', mid:'miramar_mid.jpg', hi:'miramar_hi.jpg' },
+  sanhok:  { lo:'sanhok_lo.jpg',  mid:'sanhok_mid.jpg',  hi:'sanhok_hi.jpg'  },
+  rondo:   { lo:'rondo_lo.jpg',   mid:'rondo_mid.jpg',   hi:'rondo_hi.jpg'   },
 };
+// Fallback original paths if hi-res versions don't exist yet
+const MAP_PATHS_FALLBACK = {
+  erangel:'Erangel_Main_No_Text_High_Res.png', miramar:'Miramar_Main_No_Text_High_Res.png', rondo:'Rondo_Main_No_Text_High_Res.png', sanhok:'Sanhok_Main_No_Text_High_Res.png',
+};
+
+const mapImgCache = {};
+
+function getMapSrc(key) {
+  const srcs = MAP_SRCS[key]; if (!srcs) return MAP_PATHS_FALLBACK[key] || (key+'.png');
+  if (zoom < 0.25) return srcs.lo;
+  if (zoom < 1.0)  return srcs.mid;
+  return srcs.hi;
+}
+
+function _loadMapRes(key, res, onload) {
+  const srcs = MAP_SRCS[key];
+  const src = srcs ? srcs[res] : null;
+  if (!src) return;
+  if (mapImgCache[src]) { onload?.(mapImgCache[src]); return; }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { mapImgCache[src] = img; onload?.(img); };
+  img.onerror = () => {
+    // Hi-res not generated yet — silently fall back, no toast spam
+    if (res !== 'lo') return;
+    // lo failed too — try original file
+    const fallback = MAP_PATHS_FALLBACK[key];
+    if (!fallback || mapImgCache[fallback]) return;
+    const fb = new Image(); fb.crossOrigin='anonymous';
+    fb.onload = () => { mapImgCache[fallback] = fb; onload?.(fb); };
+    fb.onerror = () => toast('MAP NOT FOUND: '+fallback, 'warn');
+    fb.src = fallback;
+  };
+  img.src = src;
+}
 
 function loadMapKey(key) {
   if(key==='custom'){ document.getElementById('file-map').click(); return; }
-  const src = MAP_PATHS[key]||(key+'.png');
-  const img = new Image();
-  img.crossOrigin='anonymous'; img.src=src;
-  img.onload=()=>{ mapImg=img; WORLD_W=img.naturalWidth||2048; WORLD_H=img.naturalHeight||2048; resetView(); draw(); };
-  img.onerror=()=>{ toast('MAP NOT FOUND: '+src,'warn'); WORLD_W=2048; WORLD_H=2048; mapImg=new Image(); draw(); };
   state.mapKey=key;
   localStorage.setItem('mz_map',key);
   document.getElementById('match-meta-map').textContent = key.charAt(0).toUpperCase()+key.slice(1);
@@ -2212,6 +2245,28 @@ function loadMapKey(key) {
     document.getElementById('map-display-name').textContent = key.charAt(0).toUpperCase()+key.slice(1);
     document.getElementById('map-display-icon').textContent = (MAP_ICONS||{})[key]||'🗺️';
   }
+
+  // Check if multi-res files exist — if not, fall back to original
+  const srcs = MAP_SRCS[key];
+  if (!srcs) {
+    // Unknown map key — load directly
+    const src = key+'.png';
+    const img = new Image(); img.crossOrigin='anonymous'; img.src=src;
+    img.onload=()=>{ mapImg=img; WORLD_W=img.naturalWidth||2048; WORLD_H=img.naturalHeight||2048; resetView(); draw(); };
+    img.onerror=()=>{ toast('MAP NOT FOUND: '+src,'warn'); };
+    return;
+  }
+
+  // Load lo-res first for instant display
+  _loadMapRes(key, 'lo', (img) => {
+    mapImg = img;
+    WORLD_W = img.naturalWidth || 2048;
+    WORLD_H = img.naturalHeight || 2048;
+    resetView(); draw();
+  });
+  // Pre-load mid + hi in background so they're ready when zooming in
+  _loadMapRes(key, 'mid');
+  _loadMapRes(key, 'hi');
 }
 
 function selectMapFromDropdown(key) {
@@ -2576,6 +2631,13 @@ function cancelPath() {
 function draw() {
   const W=canvas.width, H=canvas.height;
   ctx.clearRect(0,0,W,H);
+
+  // Swap to best cached res for current zoom level
+  const _idealSrc = getMapSrc(state.mapKey);
+  if (_idealSrc && mapImgCache[_idealSrc] && mapImg !== mapImgCache[_idealSrc]) {
+    mapImg = mapImgCache[_idealSrc];
+  }
+
   ctx.save();
   ctx.translate(panX,panY); ctx.scale(zoom,zoom);
 
