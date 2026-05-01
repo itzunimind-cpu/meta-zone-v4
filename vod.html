@@ -925,7 +925,7 @@ function onYouTubeIframeAPIReady() {
 function _createYTPlayer(videoId) {
   ytPlayer = new YT.Player('yt-player', {
     videoId,
-    playerVars: { rel:0, modestbranding:1 },
+    playerVars: { rel:0, modestbranding:1, origin: window.location.origin },
     events: {
       onReady: () => { toast('Video loaded — scrub to match start, then press START MATCH','ok'); document.getElementById('btn-start-match').disabled = !state.matchId; },
       onStateChange: () => {},
