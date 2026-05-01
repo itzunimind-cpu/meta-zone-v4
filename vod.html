@@ -917,8 +917,20 @@ async function loadMatchPlayers(matchId) {
 // ══════════════════════════════════════════════════════
 // YOUTUBE PLAYER
 // ══════════════════════════════════════════════════════
+let _ytPendingVideoId = null;
 function onYouTubeIframeAPIReady() {
-  // YT API ready — player created on demand
+  if (_ytPendingVideoId) { _createYTPlayer(_ytPendingVideoId); _ytPendingVideoId = null; }
+}
+
+function _createYTPlayer(videoId) {
+  ytPlayer = new YT.Player('yt-player', {
+    videoId,
+    playerVars: { rel:0, modestbranding:1 },
+    events: {
+      onReady: () => { toast('Video loaded — scrub to match start, then press START MATCH','ok'); document.getElementById('btn-start-match').disabled = !state.matchId; },
+      onStateChange: () => {},
+    }
+  });
 }
 
 function extractYTId(url) {
@@ -938,15 +950,11 @@ function loadVideo() {
     ytPlayer.loadVideoById(videoId);
     toast('Video loaded','ok');
     document.getElementById('btn-start-match').disabled = !state.matchId;
+  } else if (typeof YT !== 'undefined' && YT.Player) {
+    _createYTPlayer(videoId);
   } else {
-    ytPlayer = new YT.Player('yt-player', {
-      videoId,
-      playerVars: { rel:0, modestbranding:1 },
-      events: {
-        onReady: () => { toast('Video loaded — scrub to match start, then press START MATCH','ok'); document.getElementById('btn-start-match').disabled = !state.matchId; },
-        onStateChange: () => {},
-      }
-    });
+    _ytPendingVideoId = videoId;
+    toast('YouTube API loading, video will start shortly…','ok');
   }
 }
 
