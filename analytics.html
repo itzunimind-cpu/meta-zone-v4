@@ -242,6 +242,17 @@
     }
 
     /* Scan line effect on profile card */
+    /* ── EVENT BANNER ── */
+    #event-banner{display:none;align-items:center;gap:12px;padding:10px 16px;background:rgba(34,211,238,0.04);border:1px solid rgba(34,211,238,0.15);border-radius:6px;margin-bottom:16px;flex-wrap:wrap;}
+    #event-banner.show{display:flex;}
+    .ev-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.2em;text-transform:uppercase;white-space:nowrap;}
+    .ev-name{font-family:'Cabinet Grotesk',sans-serif;font-size:13px;font-weight:800;color:var(--accent);white-space:nowrap;}
+    .ev-divider{width:1px;height:16px;background:var(--border);flex-shrink:0;}
+    .ev-pills{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+    .ev-pill{padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;text-decoration:none;transition:all 0.15s;white-space:nowrap;display:inline-block;}
+    .ev-pill:hover{border-color:rgba(34,211,238,0.4);color:var(--text);}
+    .ev-pill.current{border-color:var(--accent);color:var(--accent);background:rgba(34,211,238,0.08);cursor:default;pointer-events:none;}
+
     @keyframes scanline {
       0% { top: -4px; }
       100% { top: 100%; }
@@ -506,6 +517,15 @@
 
     <!-- ANALYTICS BODY -->
     <div id="analytics-body" class="fade-in" style="display:none;">
+
+      <!-- ── EVENT BANNER ── -->
+      <div id="event-banner">
+        <iconify-icon icon="lucide:calendar-range" style="font-size:14px;color:var(--accent);flex-shrink:0;"></iconify-icon>
+        <span class="ev-label">Event</span>
+        <span class="ev-name" id="ev-name">—</span>
+        <div class="ev-divider"></div>
+        <div class="ev-pills" id="ev-pills"></div>
+      </div>
 
       <!-- ── TOP BAR: Tournament name + filters ── -->
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap;">
@@ -940,7 +960,7 @@ async function boot() {
 
 async function loadAllData() {
   // Tournament name
-  const { data: t } = await sb.from('tournaments').select('id,name').eq('id', tournamentId).single();
+  const { data: t } = await sb.from('tournaments').select('id,name,event_id,stage,cycle').eq('id', tournamentId).single();
   if (!t) {
     _hideSkeleton();
     document.getElementById('empty-state').style.display = 'flex';
@@ -948,6 +968,9 @@ async function loadAllData() {
   }
   tournamentData = t;
   document.getElementById('tournament-name-display').textContent = t.name;
+
+  // Event banner — only if this tournament belongs to an event
+  await renderEventBanner(t);
 
   // Days
   const { data: days } = await sb.from('days').select('id,name,order_index').eq('tournament_id', tournamentId).order('order_index');
@@ -990,6 +1013,53 @@ async function loadAllData() {
   buildTeamSelector();
   buildScopeSubFilter();
   showAnalytics();
+}
+
+const STAGE_LABELS = {
+  qualifiers: 'Qualifiers',
+  group_stage: 'Group Stage',
+  last_chance: 'Last Chance',
+  semi_finals: 'Semi Finals',
+  finals: 'Finals'
+};
+const STAGE_ORDER = ['qualifiers','group_stage','last_chance','semi_finals','finals'];
+
+async function renderEventBanner(t) {
+  const banner = document.getElementById('event-banner');
+  if (!t.event_id) { banner.classList.remove('show'); return; }
+
+  // Load event name
+  const { data: ev } = await sb.from('events').select('id,name').eq('id', t.event_id).single();
+  if (!ev) { banner.classList.remove('show'); return; }
+
+  // Load all tournaments in this event
+  const { data: siblings } = await sb.from('tournaments')
+    .select('id,name,stage,cycle')
+    .eq('event_id', t.event_id)
+    .order('created_at');
+  if (!siblings || siblings.length < 2) { banner.classList.remove('show'); return; }
+
+  // Sort by stage order then cycle
+  siblings.sort((a, b) => {
+    const ai = STAGE_ORDER.indexOf(a.stage); const bi = STAGE_ORDER.indexOf(b.stage);
+    if (ai !== bi) return ai - bi;
+    return (a.cycle || 0) - (b.cycle || 0);
+  });
+
+  document.getElementById('ev-name').textContent = ev.name;
+
+  const pillsEl = document.getElementById('ev-pills');
+  pillsEl.innerHTML = siblings.map(s => {
+    const stageLabel = STAGE_LABELS[s.stage] || s.stage;
+    const cycleLabel = s.stage === 'group_stage' && s.cycle ? ' C' + s.cycle : '';
+    const isCurrent = s.id === t.id;
+    if (isCurrent) {
+      return `<span class="ev-pill current">${stageLabel}${cycleLabel}</span>`;
+    }
+    return `<a class="ev-pill" href="analytics.html?tournamentId=${s.id}">${stageLabel}${cycleLabel}</a>`;
+  }).join('');
+
+  banner.classList.add('show');
 }
 
 function showAnalytics() {
