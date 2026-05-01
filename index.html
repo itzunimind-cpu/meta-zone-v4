@@ -298,8 +298,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
 .team-k{font-family:var(--font-mono);font-size:11px;color:var(--accent);}
 .team-pl{font-family:var(--font-mono);font-size:10px;color:var(--muted);min-width:22px;text-align:right;}
 
-.rp-open-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:14px 16px 16px;padding:13px;background:var(--accent);color:#020617;border:none;border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:all .15s;box-shadow:0 0 20px rgba(34,211,238,.18);}
+.rp-open-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:14px 16px 6px;padding:13px;background:var(--accent);color:#020617;border:none;border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:all .15s;box-shadow:0 0 20px rgba(34,211,238,.18);}
 .rp-open-btn:hover{background:#67e8f9;}
+.rp-vod-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 16px 16px;padding:11px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--font-display);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:all .15s;}
+.rp-vod-btn:hover{border-color:var(--purple);color:var(--purple);}
 
 .no-sel{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;gap:12px;height:100%;}
 
@@ -381,6 +383,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:
     <nav class="header-nav">
       <a href="index.html" class="nav-link active">DASHBOARD</a>
       <a href="editor.html" class="nav-link">EDITOR</a>
+      <a href="vod.html" class="nav-link">VOD REVIEW</a>
       <a href="tournament-create.html" class="nav-link">NEW TOURNAMENT</a>
       <a href="tournament-editor.html" class="nav-link">TOURNAMENT EDITOR</a>
       <a href="analytics.html" class="nav-link">TEAM ANALYTICS</a>
@@ -942,6 +945,7 @@ function matchCard(m,i){
   const more=tc>3?`<span class="pip-more">+${tc-3}</span>`:'';
   const badge=tc>0?`<span class="card-badge badge-ready">READY</span>`:`<span class="card-badge badge-empty">EMPTY</span>`;
   const eUrl=`editor.html?matchId=${m.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+  const vUrl=`vod.html?matchId=${m.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
   return`<div class="match-card${sel?' selected':''}" onclick="selectMatch('${m.id}')">
     <div class="card-img-wrap">
       ${img?`<img class="card-img" src="${img}" alt="${m.map_key}">`:`<div class="card-img-placeholder"><iconify-icon icon="lucide:map" style="font-size:36px;color:var(--muted);"></iconify-icon></div>`}
@@ -956,7 +960,10 @@ function matchCard(m,i){
     </div>
     <div class="card-foot">
       <div class="pips">${pips}${more}</div>
-      <a class="card-open" href="${eUrl}" onclick="event.stopPropagation()">OPEN <iconify-icon icon="lucide:arrow-right"></iconify-icon></a>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a class="card-open" href="${eUrl}" onclick="event.stopPropagation()">EDITOR <iconify-icon icon="lucide:arrow-right"></iconify-icon></a>
+        <a class="card-open" href="${vUrl}" onclick="event.stopPropagation()" style="color:var(--purple)">VOD <iconify-icon icon="lucide:video"></iconify-icon></a>
+      </div>
     </div>
   </div>`;
 }
@@ -977,6 +984,7 @@ function renderRP(){
   const t=tournaments.find(x=>x.id===activeTournamentId);
   const d=t?.days.find(x=>x.id===activeDayId);
   const eUrl=`editor.html?matchId=${m.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
+  const vUrl=`vod.html?matchId=${m.id}&dayId=${activeDayId}&tournamentId=${activeTournamentId}`;
   const dur=m.duration_seconds?fmtTime(m.duration_seconds):'—:——';
   const sorted=[...m.teams].sort((a,b)=>(b.kills||0)-(a.kills||0));
   ti.textContent=m.name||'Match';
@@ -1001,6 +1009,7 @@ function renderRP(){
       ${sorted.map(t=>`<div class="team-row"><div class="team-dot" style="background:${t.color||'#475569'}"></div><span class="team-nm"${t.is_self?' style="color:var(--accent);"':''}>${esc(t.name)}</span><span class="team-k">${t.kills||0}K</span><span class="team-pl">${t.placement?'#'+t.placement:'—'}</span></div>`).join('')}
     </div>`:''}
     <a class="rp-open-btn" href="${eUrl}"><iconify-icon icon="lucide:zap"></iconify-icon> OPEN IN EDITOR</a>
+    <a class="rp-vod-btn" href="${vUrl}"><iconify-icon icon="lucide:video"></iconify-icon> REVIEW IN VOD</a>
   `;
 }
 
