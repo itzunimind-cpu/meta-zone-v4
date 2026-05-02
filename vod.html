@@ -405,45 +405,74 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 
 /* ── CALIBRATION TOOL ── */
 #cal-overlay{
-  position:absolute;inset:0;z-index:30;pointer-events:none;
+  position:absolute;inset:0;z-index:30;pointer-events:none;overflow:hidden;
 }
-.cal-landmark{
+#cal-overlay svg{ position:absolute;inset:0;width:100%;height:100%; }
+.cal-dot{
   position:absolute;transform:translate(-50%,-50%);
-  width:28px;height:28px;pointer-events:all;cursor:crosshair;
+  width:24px;height:24px;pointer-events:none;
 }
-.cal-landmark-ring{
-  width:28px;height:28px;border-radius:50%;border:2px solid var(--yellow);
+.cal-dot-inner{
+  width:24px;height:24px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(250,204,21,.15);transition:background .15s;
-  box-shadow:0 0 0 1px rgba(250,204,21,.3);
+  border:2px solid;animation:calPop .2s ease-out;
 }
-.cal-landmark.placed .cal-landmark-ring{
-  border-color:var(--green);background:rgba(74,222,128,.2);
-  box-shadow:0 0 0 1px rgba(74,222,128,.4);
+@keyframes calPop{ from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.cal-dot.stream .cal-dot-inner{
+  border-color:var(--orange);background:rgba(251,146,60,.2);
+  box-shadow:0 0 0 1px rgba(251,146,60,.4),0 0 10px rgba(251,146,60,.3);
 }
-.cal-landmark-dot{
-  width:6px;height:6px;border-radius:50%;background:var(--yellow);
+.cal-dot.mappt .cal-dot-inner{
+  border-color:var(--accent);background:rgba(34,211,238,.2);
+  box-shadow:0 0 0 1px rgba(34,211,238,.4),0 0 10px rgba(34,211,238,.3);
 }
-.cal-landmark.placed .cal-landmark-dot{ background:var(--green); }
-.cal-landmark-label{
-  position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;
-  font-family:var(--font-mono);font-size:9px;color:var(--yellow);
-  white-space:nowrap;letter-spacing:.06em;text-transform:uppercase;
-  background:rgba(2,6,23,.8);padding:2px 5px;border-radius:3px;pointer-events:none;
+.cal-dot-pip{
+  width:6px;height:6px;border-radius:50%;
 }
-.cal-landmark.placed .cal-landmark-label{ color:var(--green); }
+.cal-dot.stream .cal-dot-pip{ background:var(--orange); }
+.cal-dot.mappt  .cal-dot-pip{ background:var(--accent); }
+.cal-dot-num{
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  font-family:var(--font-mono);font-size:9px;font-weight:700;
+  letter-spacing:.06em;padding:1px 4px;border-radius:3px;
+  background:rgba(2,6,23,.85);white-space:nowrap;
+}
+.cal-dot.stream .cal-dot-num{ color:var(--orange); }
+.cal-dot.mappt  .cal-dot-num{ color:var(--accent); }
 #cal-banner{
   position:absolute;bottom:70px;left:50%;transform:translateX(-50%);z-index:31;
-  background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.4);border-radius:8px;
-  padding:10px 20px;font-family:var(--font-mono);font-size:10px;color:var(--yellow);
-  letter-spacing:.08em;text-transform:uppercase;pointer-events:none;
-  display:none;text-align:center;line-height:1.8;
+  border-radius:10px;padding:12px 24px;font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.07em;text-transform:uppercase;pointer-events:none;
+  display:none;text-align:center;line-height:2;
+  transition:background .3s,border-color .3s,color .3s;
 }
 #cal-banner.show{ display:block; }
-.cal-mode-btn.active{
-  border-color:var(--yellow)!important;color:var(--yellow)!important;
-  background:rgba(250,204,21,.1)!important;
+#cal-banner.phase1{
+  background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.45);color:var(--orange);
 }
+#cal-banner.phase2{
+  background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.4);color:var(--accent);
+}
+#cal-banner.done{
+  background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.45);color:var(--green);
+}
+.cal-step-pills{
+  display:flex;justify-content:center;gap:6px;margin-bottom:6px;
+}
+.cal-step-pill{
+  height:3px;width:32px;border-radius:2px;
+  background:rgba(255,255,255,.12);transition:background .3s;
+}
+.cal-step-pill.active{ background:var(--orange); }
+.cal-step-pill.done-p{ background:var(--green); }
+.cal-step-pill.map{ background:var(--accent); }
+.cal-mode-btn.active{
+  border-color:var(--orange)!important;color:var(--orange)!important;
+  background:rgba(251,146,60,.1)!important;
+}
+/* dim everything when in cal phase 1 */
+body.cal-phase1-active #yt-player-wrap{ filter:none; }
+body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
 </style>
 </head>
 <body>
@@ -2475,39 +2504,21 @@ function resetMapOffset() {
 
 
 // ══════════════════════════════════════════════════════
-// CALIBRATION TOOL — 2-point map alignment
+// CALIBRATION TOOL — draw-a-line 2-phase system
 // ══════════════════════════════════════════════════════
+// Phase 1: User clicks 2 points on the VIDEO stream (map fades out)
+// Phase 2: User clicks those same 2 points on the MAP overlay
+// Then we solve for scale + offset automatically.
 
-// Hardcoded landmark world coordinates per map (0-2048 space)
-// These are visually distinct, spread-apart locations easy to identify on stream
-const MAP_LANDMARKS = {
-  erangel: [
-    { name: 'School',    wx: 1400, wy:  820 },
-    { name: 'Pochinki',  wx:  990, wy: 1200 },
-  ],
-  miramar: [
-    { name: 'Los Leones', wx: 1320, wy: 1380 },
-    { name: 'El Pozo',    wx:  620, wy:  820 },
-  ],
-  sanhok: [
-    { name: 'Bootcamp',   wx: 1050, wy:  680 },
-    { name: 'Paradise',   wx:  560, wy: 1350 },
-  ],
-  rondo: [
-    { name: 'Borealis',   wx: 1200, wy:  700 },
-    { name: 'Cosmodrome', wx:  700, wy: 1400 },
-  ],
-};
-
-let calMode       = false;
-let calStep       = 0;   // 0 = waiting pt1, 1 = waiting pt2, 2 = done
-let calClicks     = [];  // [{sx,sy}] — screen clicks from user
-let calLandmarks  = [];  // [{wx,wy,name}] — world coords for current map
+let calMode         = false;
+let calPhase        = 0;   // 1 = clicking stream, 2 = clicking map
+let calStreamClicks = [];  // [{sx,sy}] canvas px — from the video/stream
+let calMapClicks    = [];  // [{mx,my}] map-image px — from the map overlay
+let calSavedOpacity = 62;  // saved slider value before we fade map
 
 // Derived calibration transform (applied in drawImage + inverse in s2w)
-// calTx: offsetX, calTy: offsetY, calSx: scaleX, calSy: scaleY
 let calTx=0, calTy=0, calSx=1, calSy=1;
-let calActive = false; // true once calibration has been computed
+let calActive = false;
 
 function toggleCalibration() {
   if (calMode) { exitCalibration(); return; }
@@ -2515,120 +2526,224 @@ function toggleCalibration() {
 }
 
 function enterCalibration() {
-  const mapKey = state.mapKey || 'erangel';
-  const landmarks = MAP_LANDMARKS[mapKey];
-  if (!landmarks) { toast('No landmarks defined for this map', 'warn'); return; }
+  calMode         = true;
+  calPhase        = 1;
+  calStreamClicks = [];
+  calMapClicks    = [];
 
-  calMode      = true;
-  calStep      = 0;
-  calClicks    = [];
-  calLandmarks = landmarks;
+  // Fade the map so the user can clearly see the video
+  calSavedOpacity = parseInt(document.getElementById('map-opacity-slider').value) || 62;
+  _applyOpacity(12);
 
   document.getElementById('btn-calibrate').classList.add('active');
-  renderCalLandmarks();
   updateCalBanner();
-  toast('CALIBRATION: Click where ' + landmarks[0].name + ' is on the stream', 'warn');
+  toast('CALIBRATE — click any 2 spots you can ID on the VIDEO', 'warn');
 }
 
 function exitCalibration() {
-  calMode = false;
-  calStep = 0;
-  calClicks = [];
+  calMode         = false;
+  calPhase        = 0;
+  calStreamClicks = [];
+  calMapClicks    = [];
+  _applyOpacity(calSavedOpacity);
   document.getElementById('btn-calibrate').classList.remove('active');
   document.getElementById('cal-overlay').innerHTML = '';
-  document.getElementById('cal-banner').classList.remove('show');
+  const banner = document.getElementById('cal-banner');
+  banner.classList.remove('show','phase1','phase2','done');
 }
 
-function handleCalClick(screenX, screenY) {
-  if (!calMode || calStep >= 2) return;
+// Internal: set map opacity without updating the slider state permanently
+function _applyOpacity(val) {
+  mapOpacity = val / 100;
+  document.getElementById('map-opacity-slider').value = val;
+  document.getElementById('map-opacity-val').textContent = val + '%';
+  draw();
+}
 
-  calClicks.push({ sx: screenX, sy: screenY });
-
-  // Mark this landmark as placed in the DOM
-  const el = document.getElementById('cal-lm-' + calStep);
-  if (el) {
-    el.classList.add('placed');
-    el.style.left = (screenX / canvas.width * 100) + '%';
-    el.style.top  = (screenY / canvas.height * 100) + '%';
+// Convert a canvas-pixel click to map-image pixel using current transform
+function _screenToMapPx(sx, sy) {
+  const wx = (sx - panX) / zoom;
+  const wy = (sy - panY) / zoom;
+  let mx, my;
+  if (calActive) {
+    mx = (wx - calTx / zoom) / (calSx / zoom);
+    my = (wy - calTy / zoom) / (calSy / zoom);
+  } else {
+    mx = (wx - mapOffsetX) / mapScaleFactor;
+    my = (wy - mapOffsetY) / mapScaleFactor;
   }
+  return { mx, my };
+}
 
-  calStep++;
+function handleCalClick(sx, sy) {
+  if (!calMode) return;
 
-  if (calStep === 1) {
-    updateCalBanner();
-    toast('Good! Now click where ' + calLandmarks[1].name + ' is', 'warn');
-  } else if (calStep === 2) {
-    computeCalibration();
+  if (calPhase === 1) {
+    // ── Phase 1: recording video/stream points ──
+    if (calStreamClicks.length >= 2) return;
+    calStreamClicks.push({ sx, sy });
+    renderCalOverlay();
+
+    if (calStreamClicks.length === 1) {
+      updateCalBanner();
+      toast('Point A marked — now click a 2nd distinct spot on the video', 'warn');
+    } else {
+      // Both stream points captured → switch to phase 2
+      calPhase = 2;
+      _applyOpacity(calSavedOpacity); // restore map
+      updateCalBanner();
+      toast('Now click those SAME 2 spots on the MAP overlay ↓', 'warn');
+    }
+
+  } else if (calPhase === 2) {
+    // ── Phase 2: recording map points ──
+    if (calMapClicks.length >= 2) return;
+    const { mx, my } = _screenToMapPx(sx, sy);
+    calMapClicks.push({ mx, my, sx, sy });
+    renderCalOverlay();
+
+    if (calMapClicks.length === 1) {
+      updateCalBanner();
+      toast('Map point A marked — click the 2nd spot on the map', 'warn');
+    } else {
+      computeCalibration();
+    }
   }
 }
 
 function computeCalibration() {
-  const lm = calLandmarks;
-  const cl = calClicks;
+  const sa = calStreamClicks[0], sb = calStreamClicks[1];
+  const ma = calMapClicks[0],    mb = calMapClicks[1];
 
-  // World distance between the two landmarks
-  const dwx = lm[1].wx - lm[0].wx;
-  const dwy = lm[1].wy - lm[0].wy;
+  const dmx = mb.mx - ma.mx;
+  const dmy = mb.my - ma.my;
+  const dsx = sb.sx - sa.sx;
+  const dsy = sb.sy - sa.sy;
 
-  // Screen distance between the two clicks (in canvas pixels)
-  const dsx = cl[1].sx - cl[0].sx;
-  const dsy = cl[1].sy - cl[0].sy;
-
-  // Scale per axis: how many canvas pixels per world unit
-  // We need scaleX and scaleY separately to handle aspect ratio differences
-  calSx = dwx !== 0 ? dsx / dwx : calSx;
-  calSy = dwy !== 0 ? dsy / dwy : calSy;
-
-  // Offset: where does world origin (0,0) land on screen?
-  // screenX = wx * calSx + calTx  =>  calTx = screenX - wx * calSx
-  calTx = cl[0].sx - lm[0].wx * calSx;
-  calTy = cl[0].sy - lm[0].wy * calSy;
+  // Solve: screen_x = mx * calSx + calTx + panX
+  if (Math.abs(dmx) > 2) calSx = dsx / dmx;
+  if (Math.abs(dmy) > 2) calSy = dsy / dmy;
+  calTx = sa.sx - ma.mx * calSx - panX;
+  calTy = sa.sy - ma.my * calSy - panY;
 
   calActive = true;
 
-  // Update the manual inputs to reflect computed values
+  // Update manual inputs to reflect computed values
   document.getElementById('map-offset-x').value = calTx.toFixed(1);
   document.getElementById('map-offset-y').value = calTy.toFixed(1);
   document.getElementById('map-scale-f').value   = ((calSx + calSy) / 2).toFixed(3);
 
   draw();
-  exitCalibration();
-  toast('✓ Map calibrated — drawing coords corrected', 'ok');
+
+  // Show success banner briefly then close
+  const banner = document.getElementById('cal-banner');
+  banner.innerHTML = `
+    <div class="cal-step-pills">
+      <div class="cal-step-pill done-p"></div>
+      <div class="cal-step-pill done-p"></div>
+      <div class="cal-step-pill done-p"></div>
+    </div>
+    ✓ CALIBRATION COMPLETE — MAP ALIGNED<br>
+    <span style="opacity:.65;font-size:9px">ESC or click 🎯 to exit</span>
+  `;
+  banner.classList.remove('phase1','phase2');
+  banner.classList.add('show','done');
+  calPhase = 0; // prevent more clicks
+  setTimeout(() => exitCalibration(), 1800);
+  toast('✓ Map calibrated — coords corrected', 'ok');
 }
 
-function renderCalLandmarks() {
+function renderCalOverlay() {
   const overlay = document.getElementById('cal-overlay');
   overlay.innerHTML = '';
-  calLandmarks.forEach((lm, i) => {
-    // Compute where this landmark currently sits on screen using current transform
-    const sx = lm.wx * calSx + calTx;
-    const sy = lm.wy * calSy + calTy;
-    const pctX = sx / canvas.width  * 100;
-    const pctY = sy / canvas.height * 100;
 
-    const el = document.createElement('div');
-    el.className = 'cal-landmark';
-    el.id = 'cal-lm-' + i;
-    el.style.left = pctX + '%';
-    el.style.top  = pctY + '%';
-    el.innerHTML = `
-      <div class="cal-landmark-ring"><div class="cal-landmark-dot"></div></div>
-      <div class="cal-landmark-label">${i+1}. ${lm.name}</div>
+  const W = canvas.width, H = canvas.height;
+  // SVG for lines
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio','none');
+  overlay.appendChild(svg);
+
+  function makeDot(sx, sy, cls, label) {
+    const pctX = (sx / W * 100).toFixed(2) + '%';
+    const pctY = (sy / H * 100).toFixed(2) + '%';
+    const dot = document.createElement('div');
+    dot.className = 'cal-dot ' + cls;
+    dot.style.left = pctX; dot.style.top = pctY;
+    dot.innerHTML = `
+      <div class="cal-dot-inner"><div class="cal-dot-pip"></div></div>
+      <div class="cal-dot-num">${label}</div>
     `;
-    overlay.appendChild(el);
-  });
+    overlay.appendChild(dot);
+  }
+
+  function makeLine(x1,y1,x2,y2,color) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke',color); line.setAttribute('stroke-width','1.5');
+    line.setAttribute('stroke-dasharray','6 4'); line.setAttribute('opacity','.7');
+    svg.appendChild(line);
+  }
+
+  // Draw stream points (phase 1)
+  calStreamClicks.forEach((p,i) => makeDot(p.sx, p.sy, 'stream', `VIDEO ${i+1}`));
+  if (calStreamClicks.length === 2)
+    makeLine(calStreamClicks[0].sx, calStreamClicks[0].sy, calStreamClicks[1].sx, calStreamClicks[1].sy, '#fb923c');
+
+  // Draw map points (phase 2)
+  calMapClicks.forEach((p,i) => makeDot(p.sx, p.sy, 'mappt', `MAP ${i+1}`));
+  if (calMapClicks.length === 2)
+    makeLine(calMapClicks[0].sx, calMapClicks[0].sy, calMapClicks[1].sx, calMapClicks[1].sy, '#22d3ee');
+
+  // Draw correspondence connectors if both A points exist
+  if (calStreamClicks.length >= 1 && calMapClicks.length >= 1) {
+    makeLine(calStreamClicks[0].sx, calStreamClicks[0].sy, calMapClicks[0].sx, calMapClicks[0].sy, '#ffffff');
+  }
+  if (calStreamClicks.length >= 2 && calMapClicks.length >= 2) {
+    makeLine(calStreamClicks[1].sx, calStreamClicks[1].sy, calMapClicks[1].sx, calMapClicks[1].sy, '#ffffff');
+  }
 }
 
 function updateCalBanner() {
   const banner = document.getElementById('cal-banner');
-  if (!calMode) { banner.classList.remove('show'); return; }
-  const lm = calLandmarks[calStep];
-  if (!lm) { banner.classList.remove('show'); return; }
-  banner.innerHTML = `
-    CALIBRATION MODE — STEP ${calStep+1} OF 2<br>
-    Click where <strong>${lm.name}</strong> appears on the stream map<br>
-    <span style="opacity:.6">ESC to cancel</span>
-  `;
+  if (!calMode) { banner.classList.remove('show','phase1','phase2','done'); return; }
+
+  banner.classList.remove('phase1','phase2','done');
+
+  let pillsHtml, bodyHtml;
+  if (calPhase === 1) {
+    const p1done = calStreamClicks.length >= 1;
+    const p2done = calStreamClicks.length >= 2;
+    pillsHtml = `
+      <div class="cal-step-pills">
+        <div class="cal-step-pill ${p1done?'done-p':''} active"></div>
+        <div class="cal-step-pill ${p2done?'done-p':''}"></div>
+        <div class="cal-step-pill"></div>
+      </div>`;
+    bodyHtml = `
+      STEP 1 — CLICK 2 SPOTS ON THE <strong>VIDEO</strong><br>
+      <span style="opacity:.7;font-size:9px">Pick any 2 landmarks you can see clearly &nbsp;·&nbsp; ${calStreamClicks.length}/2 marked</span><br>
+      <span style="opacity:.5;font-size:9px">ESC to cancel</span>
+    `;
+    banner.classList.add('phase1');
+  } else if (calPhase === 2) {
+    const p1done = calMapClicks.length >= 1;
+    pillsHtml = `
+      <div class="cal-step-pills">
+        <div class="cal-step-pill done-p"></div>
+        <div class="cal-step-pill ${p1done?'done-p':''} map active"></div>
+        <div class="cal-step-pill"></div>
+      </div>`;
+    bodyHtml = `
+      STEP 2 — CLICK THOSE SAME SPOTS ON THE <strong>MAP</strong><br>
+      <span style="opacity:.7;font-size:9px">Match the order — point A first, then B &nbsp;·&nbsp; ${calMapClicks.length}/2 marked</span><br>
+      <span style="opacity:.5;font-size:9px">ESC to cancel</span>
+    `;
+    banner.classList.add('phase2');
+  }
+
+  banner.innerHTML = pillsHtml + bodyHtml;
   banner.classList.add('show');
 }
 
