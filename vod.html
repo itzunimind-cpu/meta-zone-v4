@@ -2613,7 +2613,7 @@ function _updateLoupe(canvasSx, canvasSy, cssSx, cssSy) {
   const lCtx = lc.getContext('2d');
   lCtx.clearRect(0, 0, DIAM, DIAM);
 
-  // Dark base fill
+  // Dark base fill (always)
   lCtx.save();
   lCtx.beginPath();
   lCtx.arc(DIAM/2, DIAM/2, DIAM/2, 0, Math.PI*2);
@@ -2621,10 +2621,14 @@ function _updateLoupe(canvasSx, canvasSy, cssSx, cssSy) {
   lCtx.fillStyle = '#04090f';
   lCtx.fillRect(0, 0, DIAM, DIAM);
 
-  // Clamp source rect so we never go out of canvas bounds
-  const srcX = Math.max(0, Math.min(canvas.width  - srcSz, canvasSx - srcSz/2));
-  const srcY = Math.max(0, Math.min(canvas.height - srcSz, canvasSy - srcSz/2));
-  lCtx.drawImage(canvas, srcX, srcY, srcSz, srcSz, 0, 0, DIAM, DIAM);
+  if (calPhase === 2) {
+    // Phase 2: sample from the map canvas — useful and correct
+    const srcX = Math.max(0, Math.min(canvas.width  - srcSz, canvasSx - srcSz/2));
+    const srcY = Math.max(0, Math.min(canvas.height - srcSz, canvasSy - srcSz/2));
+    lCtx.drawImage(canvas, srcX, srcY, srcSz, srcSz, 0, 0, DIAM, DIAM);
+  }
+  // Phase 1: video lives in a cross-origin iframe — can't sample it.
+  // Just show the crosshair so the user can click precisely on the video point they chose.
 
   lCtx.restore();
 
@@ -2688,7 +2692,8 @@ function handleCalClick(sx, sy) {
     } else {
       // Both stream points captured → switch to phase 2
       calPhase = 2;
-      _applyOpacity(calSavedOpacity); // restore map
+      renderCalOverlay(); // re-render NOW so orange dots vanish immediately
+      _applyOpacity(calSavedOpacity);
       updateCalBanner();
       toast('Now click those SAME 2 spots on the MAP overlay ↓', 'warn');
     }
