@@ -461,6 +461,13 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 
     <div class="tb-divider"></div>
 
+    <!-- Active Team Selector -->
+    <select class="tb-select" id="sel-active-team" onchange="setActiveTeam(this.value)" title="Drawing team" style="min-width:130px;border-color:var(--accent);color:var(--accent);">
+      <option value="">— Team —</option>
+    </select>
+
+    <div class="tb-divider"></div>
+
     <!-- Drawing Tools -->
     <button class="tb-mode-pill" data-mode="zone"  onclick="setMode('zone')"  title="Zone Circle (drag)">⭕ ZONE</button>
     <button class="tb-mode-pill" data-mode="path"  onclick="setMode('path')"  title="Path (click waypoints, dbl-click finish)">→ PATH</button>
@@ -1627,6 +1634,8 @@ function renderSquadPanel() {
       enemyList.appendChild(el);
     });
   }
+
+  refreshTeamSelector();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2339,6 +2348,23 @@ function getActiveShapes(){ if(!state.activeTeamId)return null; if(!shapesCache[
 function hexRgb(hex){ const h=hex.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
 function fmtTime(s){ s=Math.max(0,Math.round(s||0)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
 function setSyncState(s){ document.getElementById('sync-dot').className='sync-dot '+s; document.getElementById('sync-label').textContent={syncing:'SAVING…',saved:'SYNCED',error:'ERROR'}[s]||'—'; }
+function setActiveTeam(teamId) {
+  state.activeTeamId = teamId || null;
+  draw();
+}
+
+function refreshTeamSelector() {
+  const sel = document.getElementById('sel-active-team');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Team —</option>';
+  const matchTeams = teams.filter(t => t.match_id === state.matchId);
+  matchTeams.forEach(t => {
+    const o = new Option((t.is_self ? '★ ' : '') + t.name, t.id);
+    if (t.id === state.activeTeamId) o.selected = true;
+    sel.add(o);
+  });
+}
+
 function setMode(m){
   state.mode=m;
   document.querySelectorAll('.tb-mode-pill').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
