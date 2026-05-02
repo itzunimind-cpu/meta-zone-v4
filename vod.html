@@ -455,7 +455,6 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 /* ── Loupe (magnifier) ── */
 #cal-loupe-wrap{
   position:absolute;pointer-events:none;z-index:35;display:none;
-  transform:translateX(-50%);
 }
 #cal-loupe-canvas{
   border-radius:50%;
@@ -2598,67 +2597,65 @@ function _updateLoupe(canvasSx, canvasSy, cssSx, cssSy) {
 
   const DIAM   = 160;
   const ZOOM_F = 4;
-  const srcSz  = DIAM / ZOOM_F; // canvas pixels to sample
+  const srcSz  = DIAM / ZOOM_F; // 40 canvas px → displayed at 160px = 4×
 
-  // Position: horizontally centred on cursor, 20px above it
+  // Position centred on cursor, 24px above it, clamped so it doesn't go off-stage
+  const stageW = stage.clientWidth;
+  const stageH = stage.clientHeight;
+  const rawLeft = cssSx - DIAM / 2;
+  const rawTop  = cssSy - DIAM - 24;
+  wrap.style.left    = Math.max(0, Math.min(stageW - DIAM, rawLeft)) + 'px';
+  wrap.style.top     = Math.max(0, rawTop) + 'px';
   wrap.style.display = 'block';
-  wrap.style.left    = cssSx + 'px';
-  wrap.style.top     = (cssSy - DIAM - 20) + 'px';
+  // Don't use translateX(-50%) on the wrap — position manually instead
+  wrap.style.transform = 'none';
 
   const lCtx = lc.getContext('2d');
   lCtx.clearRect(0, 0, DIAM, DIAM);
 
-  // Circular clip
+  // Dark base fill
   lCtx.save();
   lCtx.beginPath();
   lCtx.arc(DIAM/2, DIAM/2, DIAM/2, 0, Math.PI*2);
   lCtx.clip();
-
-  // Dark fill first (so edges look clean)
-  lCtx.fillStyle = '#040c1a';
+  lCtx.fillStyle = '#04090f';
   lCtx.fillRect(0, 0, DIAM, DIAM);
 
-  // In phase 1 (map faded to 12%), boost brightness so structure is visible
-  if (calPhase === 1) lCtx.filter = 'brightness(5)';
-  lCtx.drawImage(
-    canvas,
-    canvasSx - srcSz/2, canvasSy - srcSz/2, srcSz, srcSz,
-    0, 0, DIAM, DIAM
-  );
-  lCtx.filter = 'none';
+  // Clamp source rect so we never go out of canvas bounds
+  const srcX = Math.max(0, Math.min(canvas.width  - srcSz, canvasSx - srcSz/2));
+  const srcY = Math.max(0, Math.min(canvas.height - srcSz, canvasSy - srcSz/2));
+  lCtx.drawImage(canvas, srcX, srcY, srcSz, srcSz, 0, 0, DIAM, DIAM);
+
   lCtx.restore();
 
   // Crosshair
   const col = calPhase === 1 ? '#fb923c' : '#22d3ee';
   lCtx.strokeStyle = col;
   lCtx.lineWidth = 1;
-  lCtx.setLineDash([4, 3]);
+  lCtx.setLineDash([3, 3]);
   lCtx.beginPath();
-  lCtx.moveTo(DIAM/2, DIAM/2 - 14); lCtx.lineTo(DIAM/2, DIAM/2 + 14);
-  lCtx.moveTo(DIAM/2 - 14, DIAM/2); lCtx.lineTo(DIAM/2 + 14, DIAM/2);
+  lCtx.moveTo(DIAM/2, DIAM/2 - 16); lCtx.lineTo(DIAM/2, DIAM/2 + 16);
+  lCtx.moveTo(DIAM/2 - 16, DIAM/2); lCtx.lineTo(DIAM/2 + 16, DIAM/2);
   lCtx.stroke();
   lCtx.setLineDash([]);
 
-  // Centre dot
+  // Centre pip
   lCtx.fillStyle = col;
   lCtx.beginPath();
   lCtx.arc(DIAM/2, DIAM/2, 2, 0, Math.PI*2);
   lCtx.fill();
 
-  // Border ring
+  // Border
   lCtx.strokeStyle = col;
   lCtx.lineWidth = 2;
   lCtx.beginPath();
   lCtx.arc(DIAM/2, DIAM/2, DIAM/2 - 1, 0, Math.PI*2);
   lCtx.stroke();
 
-  // Label (which point are we on)
-  const phase1Count = calStreamClicks.length;
-  const phase2Count = calMapClicks.length;
-  const label = calPhase === 1
-    ? `VIDEO POINT ${phase1Count + 1}`
-    : `MAP POINT ${phase2Count + 1}`;
-  document.getElementById('cal-loupe-label').textContent = label;
+  // Label
+  const placed = calPhase === 1 ? calStreamClicks.length : calMapClicks.length;
+  document.getElementById('cal-loupe-label').textContent =
+    (calPhase === 1 ? 'VIDEO' : 'MAP') + ' POINT ' + (placed + 1) + '  ·  4×';
 }
 
 // Convert a canvas-pixel click to map-image pixel using current transform
