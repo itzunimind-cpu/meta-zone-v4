@@ -510,6 +510,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
     <!-- ── VOD STAGE (video + canvas) ── -->
     <div id="vod-stage">
       <div id="yt-player-wrap"><div id="yt-player"></div></div>
+
       <canvas id="overlay-canvas"></canvas>
       <div id="zoom-hud">1.00×</div>
       <div id="toast-container"></div>
@@ -710,7 +711,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 </div>
 
 <!-- ══ SCRIPTS ══ -->
-<script async src="https://www.youtube.com/iframe_api"></script>
+<!-- YouTube IFrame API not used — player controlled via postMessage -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 'use strict';
@@ -924,33 +925,61 @@ async function loadMatchPlayers(matchId) {
 }
 
 // ══════════════════════════════════════════════════════
-// YOUTUBE PLAYER
+// YOUTUBE PLAYER  (postMessage bridge — no iframe_api needed)
 // ══════════════════════════════════════════════════════
-let _ytPendingVideoId = null;
+let _ytCurrentTime = 0;   // kept fresh from infoDelivery postMessages
 
-// Called by YT IFrame API once loaded — eagerly create a blank player so it's warm
-function onYouTubeIframeAPIReady() {
-  _createYTPlayer(null);
+// Build a plain iframe and wrap it in a proxy that mimics YT.Player API
+function _createYTPlayer(videoId) {
+  const container = document.getElementById('yt-player');
+  let iframe = document.getElementById('yt-iframe');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'yt-iframe';
+    iframe.style.cssText = 'width:100%;height:100%;border:none;';
+    iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
+    iframe.allowFullscreen = true;
+    container.appendChild(iframe);
+    window.addEventListener('message', _onYTMessage);
+  }
+  _ytPlayerReady = false;
+  const origin = encodeURIComponent(location.origin);
+  iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
+
+  // Proxy object — every method sends a postMessage command to the iframe
+  ytPlayer = {
+    _iframe: iframe,
+    _cmd(func, args) {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*');
+      }
+    },
+    loadVideoById(id)      { this._cmd('loadVideoById',    [id]); },
+    seekTo(t, b)           { this._cmd('seekTo',           [t, b !== false]); },
+    stopVideo()            { this._cmd('stopVideo'); },
+    playVideo()            { this._cmd('playVideo'); },
+    pauseVideo()           { this._cmd('pauseVideo'); },
+    setPlaybackRate(r)     { this._cmd('setPlaybackRate',  [r]); },
+    getCurrentTime()       { return _ytCurrentTime; },
+  };
 }
 
-function _createYTPlayer(videoId) {
-  const opts = {
-    playerVars: { rel:0, modestbranding:1, origin: window.location.origin },
-    events: {
-      onReady: (e) => {
-        _ytPlayerReady = true;
-        if (_ytPendingVideoId) {
-          e.target.loadVideoById(_ytPendingVideoId);
-          _ytPendingVideoId = null;
-          toast('Video loaded — scrub to match start, then press START MATCH','ok');
-          document.getElementById('btn-start-match').disabled = !state.matchId;
-        }
-      },
-      onStateChange: () => {},
-    }
-  };
-  if (videoId) opts.videoId = videoId;
-  ytPlayer = new YT.Player('yt-player', opts);
+// Receives all postMessages from the YouTube embed
+function _onYTMessage(event) {
+  if (!event.data) return;
+  let data;
+  try { data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; } catch(e) { return; }
+
+  if (data.event === 'onReady') {
+    _ytPlayerReady = true;
+    toast('Video loaded — scrub to match start, then press START MATCH', 'ok');
+    const btn = document.getElementById('btn-start-match');
+    if (btn) btn.disabled = !state.matchId;
+  }
+
+  if (data.event === 'infoDelivery' && data.info && data.info.currentTime !== undefined) {
+    _ytCurrentTime = data.info.currentTime;
+  }
 }
 
 function extractYTId(url) {
@@ -963,23 +992,19 @@ function loadVideo() {
   const input = document.getElementById('vod-url-input');
   const url = input.value.trim();
   const videoId = extractYTId(url);
-  if (!videoId) { toast('Invalid YouTube URL','err'); return; }
+  if (!videoId) { toast('Invalid YouTube URL', 'err'); return; }
   vodUrl = url;
 
   if (ytPlayer && _ytPlayerReady) {
-    // Player is warm and ready — instant load
+    // iframe already live — swap video instantly via postMessage
     ytPlayer.loadVideoById(videoId);
-    toast('Video loading…','ok');
-    document.getElementById('btn-start-match').disabled = !state.matchId;
+    toast('Video loading…', 'ok');
+    const btn = document.getElementById('btn-start-match');
+    if (btn) btn.disabled = !state.matchId;
   } else {
-    // Player exists but not ready yet (or hasn't been created) — queue it; onReady will pick it up
-    _ytPendingVideoId = videoId;
-    toast('YouTube player warming up — video will start in a moment…','ok');
-    // Only create a new player if one hasn't been created at all
-    if (typeof YT !== 'undefined' && YT.Player && !ytPlayer) {
-      _createYTPlayer(null);
-    }
-    // If ytPlayer exists but _ytPlayerReady is false, onReady will fire soon and load _ytPendingVideoId
+    // First load (or player reset) — create the iframe with video in the src URL
+    _createYTPlayer(videoId);
+    toast('Loading video…', 'ok');
   }
 }
 
