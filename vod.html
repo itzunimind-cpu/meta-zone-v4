@@ -847,7 +847,8 @@ function resetLocalState() {
   tournaments=[]; days=[]; matches=[]; teams=[];
   shapesCache={}; zonesCache={}; annotations=[]; matchPlayers=[];
   state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
-  matchActive=false; ytPlayer=null; vodStartOffset=0; matchTime=0;
+  matchActive=false; vodStartOffset=0; matchTime=0;
+  if (ytPlayer && typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
   stopPolling(); updateEventButtons();
   refreshDropdowns(); renderSquadPanel();
 }
