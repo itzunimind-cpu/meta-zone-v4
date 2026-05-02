@@ -710,7 +710,7 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 </div>
 
 <!-- ══ SCRIPTS ══ -->
-<script src="https://www.youtube.com/iframe_api"></script>
+<script async src="https://www.youtube.com/iframe_api"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 'use strict';
@@ -925,19 +925,29 @@ async function loadMatchPlayers(matchId) {
 // YOUTUBE PLAYER
 // ══════════════════════════════════════════════════════
 let _ytPendingVideoId = null;
+
+// Called by YT IFrame API once loaded — eagerly create a blank player so it's warm
 function onYouTubeIframeAPIReady() {
-  if (_ytPendingVideoId) { _createYTPlayer(_ytPendingVideoId); _ytPendingVideoId = null; }
+  _createYTPlayer(null);
 }
 
 function _createYTPlayer(videoId) {
-  ytPlayer = new YT.Player('yt-player', {
-    videoId,
+  const opts = {
     playerVars: { rel:0, modestbranding:1, origin: window.location.origin },
     events: {
-      onReady: () => { toast('Video loaded — scrub to match start, then press START MATCH','ok'); document.getElementById('btn-start-match').disabled = !state.matchId; },
+      onReady: (e) => {
+        if (_ytPendingVideoId) {
+          e.target.loadVideoById(_ytPendingVideoId);
+          _ytPendingVideoId = null;
+          toast('Video loaded — scrub to match start, then press START MATCH','ok');
+          document.getElementById('btn-start-match').disabled = !state.matchId;
+        }
+      },
       onStateChange: () => {},
     }
-  });
+  };
+  if (videoId) opts.videoId = videoId;
+  ytPlayer = new YT.Player('yt-player', opts);
 }
 
 function extractYTId(url) {
@@ -954,14 +964,17 @@ function loadVideo() {
   vodUrl = url;
 
   if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+    // Player already warm — instant load
     ytPlayer.loadVideoById(videoId);
-    toast('Video loaded','ok');
+    toast('Video loading…','ok');
     document.getElementById('btn-start-match').disabled = !state.matchId;
-  } else if (typeof YT !== 'undefined' && YT.Player) {
-    _createYTPlayer(videoId);
   } else {
+    // Player not ready yet — queue it; onReady will pick it up
     _ytPendingVideoId = videoId;
-    toast('YouTube API loading, video will start shortly…','ok');
+    toast('YouTube player warming up, video will start shortly…','ok');
+    if (typeof YT !== 'undefined' && YT.Player && !ytPlayer) {
+      _createYTPlayer(null);
+    }
   }
 }
 
