@@ -946,6 +946,18 @@ function _createYTPlayer(videoId) {
   const origin = encodeURIComponent(location.origin);
   iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&origin=${origin}`;
 
+  // Fallback: if onReady postMessage never fires (some network/origin configs),
+  // force-ready after 5s so the button is never stuck disabled.
+  clearTimeout(window._ytReadyFallback);
+  window._ytReadyFallback = setTimeout(() => {
+    if (!_ytPlayerReady) {
+      _ytPlayerReady = true;
+      toast('Video ready — scrub to match start, then press START MATCH', 'ok');
+      const btn = document.getElementById('btn-start-match');
+      if (btn) btn.disabled = !state.matchId;
+    }
+  }, 5000);
+
   // Proxy object — every method sends a postMessage command to the iframe
   ytPlayer = {
     _iframe: iframe,
@@ -997,10 +1009,21 @@ function loadVideo() {
 
   if (ytPlayer && _ytPlayerReady) {
     // iframe already live — swap video instantly via postMessage
+    _ytPlayerReady = false;
     ytPlayer.loadVideoById(videoId);
     toast('Video loading…', 'ok');
     const btn = document.getElementById('btn-start-match');
-    if (btn) btn.disabled = !state.matchId;
+    if (btn) btn.disabled = true;
+    // Fallback in case onReady doesn't re-fire for loadVideoById
+    clearTimeout(window._ytReadyFallback);
+    window._ytReadyFallback = setTimeout(() => {
+      if (!_ytPlayerReady) {
+        _ytPlayerReady = true;
+        const b = document.getElementById('btn-start-match');
+        if (b) b.disabled = !state.matchId;
+        toast('Video ready — scrub to match start, then press START MATCH', 'ok');
+      }
+    }, 5000);
   } else {
     // First load (or player reset) — create the iframe with video in the src URL
     _createYTPlayer(videoId);
@@ -1049,7 +1072,7 @@ function updateMatchTimeDisplay() {
 }
 
 async function toggleMatchActive() {
-  if (!ytPlayer) { toast('Load a video first','warn'); return; }
+  if (!ytPlayer || !_ytPlayerReady) { toast('Load a video first and wait for it to be ready','warn'); return; }
   if (!state.matchId) { toast('Select a match first','warn'); return; }
 
   if (!matchActive) {
@@ -1774,7 +1797,7 @@ async function onMatchChange(val) {
       }
     }
 
-    document.getElementById('btn-start-match').disabled = !ytPlayer;
+    document.getElementById('btn-start-match').disabled = !_ytPlayerReady;
   }
   stopPolling(); matchActive=false; matchTime=0; state.time=0;
   document.getElementById('btn-start-match').textContent='▶ START MATCH';
