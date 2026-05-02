@@ -72,9 +72,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 
 /* ── VOD TOOLBAR ── */
 #vod-toolbar{
-  height:50px;min-height:50px;background:var(--bg-panel);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:8px;padding:0 12px;flex-shrink:0;overflow-x:auto;
+  min-height:50px;background:var(--bg-panel);border-bottom:1px solid var(--border);
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px;flex-shrink:0;
 }
+#tb-row1,#tb-row2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;}
 .tb-select{
   height:30px;padding:0 8px;background:var(--bg);color:var(--text);border:1px solid var(--border);
   border-radius:6px;font-family:var(--font-body);font-size:11px;font-weight:500;outline:none;
@@ -401,6 +402,48 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 .apm-player-row.sel .apm-checkbox{ background:var(--accent);border-color:var(--accent);color:#020617; }
 .apm-player-name{ font-size:13px;font-weight:600;flex:1; }
 .apm-player-role{ font-family:var(--font-mono);font-size:9px;color:var(--muted); }
+
+/* ── CALIBRATION TOOL ── */
+#cal-overlay{
+  position:absolute;inset:0;z-index:30;pointer-events:none;
+}
+.cal-landmark{
+  position:absolute;transform:translate(-50%,-50%);
+  width:28px;height:28px;pointer-events:all;cursor:crosshair;
+}
+.cal-landmark-ring{
+  width:28px;height:28px;border-radius:50%;border:2px solid var(--yellow);
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(250,204,21,.15);transition:background .15s;
+  box-shadow:0 0 0 1px rgba(250,204,21,.3);
+}
+.cal-landmark.placed .cal-landmark-ring{
+  border-color:var(--green);background:rgba(74,222,128,.2);
+  box-shadow:0 0 0 1px rgba(74,222,128,.4);
+}
+.cal-landmark-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--yellow);
+}
+.cal-landmark.placed .cal-landmark-dot{ background:var(--green); }
+.cal-landmark-label{
+  position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;
+  font-family:var(--font-mono);font-size:9px;color:var(--yellow);
+  white-space:nowrap;letter-spacing:.06em;text-transform:uppercase;
+  background:rgba(2,6,23,.8);padding:2px 5px;border-radius:3px;pointer-events:none;
+}
+.cal-landmark.placed .cal-landmark-label{ color:var(--green); }
+#cal-banner{
+  position:absolute;bottom:70px;left:50%;transform:translateX(-50%);z-index:31;
+  background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.4);border-radius:8px;
+  padding:10px 20px;font-family:var(--font-mono);font-size:10px;color:var(--yellow);
+  letter-spacing:.08em;text-transform:uppercase;pointer-events:none;
+  display:none;text-align:center;line-height:1.8;
+}
+#cal-banner.show{ display:block; }
+.cal-mode-btn.active{
+  border-color:var(--yellow)!important;color:var(--yellow)!important;
+  background:rgba(250,204,21,.1)!important;
+}
 </style>
 </head>
 <body>
@@ -444,76 +487,68 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 
   <!-- VOD Toolbar -->
   <div id="vod-toolbar">
-    <!-- Match Selection -->
-    <select class="tb-select" id="sel-tournament" onchange="onTournamentChange(this.value)">
-      <option value="">— Tournament —</option>
-    </select>
-    <select class="tb-select" id="sel-day" onchange="onDayChange(this.value)">
-      <option value="">— Day —</option>
-    </select>
-    <select class="tb-select" id="sel-match" onchange="onMatchChange(this.value)">
-      <option value="">— Match —</option>
-    </select>
-
-    <div class="tb-divider"></div>
-
-    <!-- YouTube URL -->
-    <input class="tb-input" id="vod-url-input" placeholder="Paste YouTube URL…" onkeydown="if(event.key==='Enter')loadVideo()">
-    <button class="tb-btn" onclick="loadVideo()">▶ LOAD</button>
-
-    <div class="tb-divider"></div>
-
-    <!-- START MATCH -->
-    <button class="btn-start-match" id="btn-start-match" onclick="toggleMatchActive()" disabled>▶ START MATCH</button>
-    <div class="tb-time" id="tb-match-time">—:——</div>
-
-    <div class="tb-divider"></div>
-
-    <!-- Active Team Selector -->
-    <select class="tb-select" id="sel-active-team" onchange="setActiveTeam(this.value)" title="Drawing team" style="min-width:130px;border-color:var(--accent);color:var(--accent);">
-      <option value="">— Team —</option>
-    </select>
-
-    <div class="tb-divider"></div>
-
-    <!-- Drawing Tools -->
-    <button class="tb-mode-pill" data-mode="zone"  onclick="setMode('zone')"  title="Zone Circle (drag)">⭕ ZONE</button>
-    <button class="tb-mode-pill" data-mode="path"  onclick="setMode('path')"  title="Path (click waypoints, dbl-click finish)">→ PATH</button>
-    <button class="tb-mode-pill" data-mode="pin"   onclick="setMode('pin')"   title="Pin">📍 PIN</button>
-    <button class="tb-mode-pill" data-mode="erase" onclick="setMode('erase')" title="Erase shape">✕ ERASE</button>
-    <button class="tb-btn" onclick="undo()" title="Undo (Ctrl+Z)">↩ UNDO</button>
-
-    <div class="tb-divider"></div>
-
-    <!-- Overlay Toggle -->
-    <button class="tb-btn active" id="btn-overlay" onclick="toggleOverlayCanvas()" title="Toggle map overlay (Z)">👁 MAP</button>
-    <div class="map-opacity-cluster" id="map-opacity-cluster" title="Map opacity">
-      <span class="map-opacity-label">MAP α</span>
-      <input type="range" class="map-opacity-slider" id="map-opacity-slider" min="0" max="100" value="62" oninput="setMapOpacity(this.value)">
-      <span class="map-opacity-val" id="map-opacity-val">62%</span>
+    <!-- ROW 1: Match setup + video load -->
+    <div id="tb-row1">
+      <select class="tb-select" id="sel-tournament" onchange="onTournamentChange(this.value)">
+        <option value="">— Tournament —</option>
+      </select>
+      <select class="tb-select" id="sel-day" onchange="onDayChange(this.value)">
+        <option value="">— Day —</option>
+      </select>
+      <select class="tb-select" id="sel-match" onchange="onMatchChange(this.value)">
+        <option value="">— Match —</option>
+      </select>
+      <div class="tb-divider"></div>
+      <input class="tb-input" id="vod-url-input" placeholder="Paste YouTube URL…" onkeydown="if(event.key==='Enter')loadVideo()">
+      <button class="tb-btn" onclick="loadVideo()">▶ LOAD</button>
+      <div class="tb-divider"></div>
+      <button class="btn-start-match" id="btn-start-match" onclick="toggleMatchActive()" disabled>▶ START MATCH</button>
+      <div class="tb-time" id="tb-match-time">—:——</div>
+      <div class="tb-divider"></div>
+      <!-- Map alignment -->
+      <span style="font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;">MAP ALIGN</span>
+      <label style="font-size:10px;color:var(--muted);white-space:nowrap;">X <input type="number" id="map-offset-x" value="0" step="1" style="width:48px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:10px;" oninput="updateMapOffset()"></label>
+      <label style="font-size:10px;color:var(--muted);white-space:nowrap;">Y <input type="number" id="map-offset-y" value="0" step="1" style="width:48px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:10px;" oninput="updateMapOffset()"></label>
+      <label style="font-size:10px;color:var(--muted);white-space:nowrap;">SCALE <input type="number" id="map-scale-f" value="1.00" step="0.01" min="0.1" max="3" style="width:52px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:10px;" oninput="updateMapOffset()"></label>
+      <button class="tb-btn" onclick="resetMapOffset()" title="Reset map alignment">↺ RESET</button>
+      <button class="tb-btn cal-mode-btn" id="btn-calibrate" onclick="toggleCalibration()" title="2-point map calibration">🎯 CALIBRATE</button>
     </div>
 
-    <!-- Save -->
-    <button class="tb-btn" id="btn-save" onclick="manualSave()">💾 SAVE</button>
-
-    <div class="tb-spacer"></div>
-
-    <!-- Zoom -->
-    <div class="tb-zoom-cluster">
-      <button class="tb-zoom-btn" onclick="adjustZoom(-.15)">−</button>
-      <span class="tb-zoom-val" id="zoom-hud-tb">1.00×</span>
-      <button class="tb-zoom-btn" onclick="adjustZoom(.15)">+</button>
-    </div>
-
-    <div class="tb-divider"></div>
-
-    <!-- Playback speed -->
-    <div class="speed-cluster" id="speed-cluster">
-      <button class="speed-btn" onclick="setSpeed(.25)">0.25×</button>
-      <button class="speed-btn" onclick="setSpeed(.5)">0.5×</button>
-      <button class="speed-btn active" onclick="setSpeed(1)">1×</button>
-      <button class="speed-btn" onclick="setSpeed(1.5)">1.5×</button>
-      <button class="speed-btn" onclick="setSpeed(2)">2×</button>
+    <!-- ROW 2: Drawing tools + overlay + playback -->
+    <div id="tb-row2">
+      <select class="tb-select" id="sel-active-team" onchange="setActiveTeam(this.value)" title="Drawing team" style="min-width:120px;border-color:var(--accent);color:var(--accent);">
+        <option value="">— Team —</option>
+      </select>
+      <div class="tb-divider"></div>
+      <button class="tb-mode-pill" data-mode="zone"  onclick="setMode('zone')"  title="Zone Circle (drag)">⭕ ZONE</button>
+      <button class="tb-mode-pill" data-mode="path"  onclick="setMode('path')"  title="Path — click waypoints, RIGHT-CLICK to finish">→ PATH</button>
+      <button class="tb-mode-pill" data-mode="pin"   onclick="setMode('pin')"   title="Pin">📍 PIN</button>
+      <button class="tb-mode-pill" data-mode="erase" onclick="setMode('erase')" title="Erase shape">✕ ERASE</button>
+      <button class="tb-btn" onclick="undo()" title="Undo (Ctrl+Z)">↩ UNDO</button>
+      <div class="tb-divider"></div>
+      <button class="tb-btn active" id="btn-overlay" onclick="toggleOverlayCanvas()" title="Toggle map overlay (Z)">👁 MAP</button>
+      <div class="map-opacity-cluster" id="map-opacity-cluster" title="Map opacity">
+        <span class="map-opacity-label">MAP α</span>
+        <input type="range" class="map-opacity-slider" id="map-opacity-slider" min="0" max="100" value="62" oninput="setMapOpacity(this.value)">
+        <span class="map-opacity-val" id="map-opacity-val">62%</span>
+      </div>
+      <button class="tb-btn" id="btn-play-pause" onclick="togglePlayPause()" title="Play/Pause video (P key)">⏯ PLAY</button>
+      <div class="tb-divider"></div>
+      <button class="tb-btn" id="btn-save" onclick="manualSave()">💾 SAVE</button>
+      <div class="tb-spacer"></div>
+      <div class="tb-zoom-cluster">
+        <button class="tb-zoom-btn" onclick="adjustZoom(-.15)">−</button>
+        <span class="tb-zoom-val" id="zoom-hud-tb">1.00×</span>
+        <button class="tb-zoom-btn" onclick="adjustZoom(.15)">+</button>
+      </div>
+      <div class="tb-divider"></div>
+      <div class="speed-cluster" id="speed-cluster">
+        <button class="speed-btn" onclick="setSpeed(.25)">0.25×</button>
+        <button class="speed-btn" onclick="setSpeed(.5)">0.5×</button>
+        <button class="speed-btn active" onclick="setSpeed(1)">1×</button>
+        <button class="speed-btn" onclick="setSpeed(1.5)">1.5×</button>
+        <button class="speed-btn" onclick="setSpeed(2)">2×</button>
+      </div>
     </div>
   </div>
 
@@ -527,7 +562,10 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
       <canvas id="overlay-canvas"></canvas>
       <div id="zoom-hud">1.00×</div>
       <div id="toast-container"></div>
-      <div id="path-indicator">PATH — CLICK WAYPOINTS · DBL-CLICK TO FINISH · ESC CANCEL</div>
+      <div id="path-indicator">PATH — CLICK WAYPOINTS · RIGHT-CLICK TO FINISH · ESC CANCEL</div>
+      <!-- Calibration overlay -->
+      <div id="cal-overlay"></div>
+      <div id="cal-banner"></div>
 
       <!-- Placement banner -->
       <div id="placement-banner">
@@ -795,6 +833,7 @@ let _apmSelectedIds = new Set(), _apmAllPlayers = [];
 // Map
 let mapImg = new Image(); mapImg.crossOrigin = 'anonymous';
 let WORLD_W = 2048, WORLD_H = 2048;
+let mapOffsetX = 0, mapOffsetY = 0, mapScaleFactor = 1.0;
 let zoom = 1, panX = 0, panY = 0;
 const MAP_SRCS = {
   erangel: {lo:'erangel_lo.jpg',mid:'erangel_mid.jpg',hi:'erangel_hi.jpg'},
@@ -865,6 +904,7 @@ function resetLocalState() {
   state.tournamentId=null; state.dayId=null; state.matchId=null; state.activeTeamId=null;
   matchActive=false; vodStartOffset=0; matchTime=0;
   if (ytPlayer && typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
+  _isPlaying=false; _syncPlayPauseBtn();
   stopPolling(); updateEventButtons();
   refreshDropdowns(); renderSquadPanel();
 }
@@ -1878,6 +1918,7 @@ function initCanvas() {
   canvas.addEventListener('mouseup',    onPointerUp);
   canvas.addEventListener('mouseleave', onPointerLeave);
   canvas.addEventListener('dblclick',   onDblClick);
+  canvas.addEventListener('contextmenu', onRightClick);
   canvas.addEventListener('touchstart', onPointerDown, {passive:false});
   canvas.addEventListener('touchmove',  onPointerMove, {passive:false});
   canvas.addEventListener('touchend',   onPointerUp,   {passive:false});
@@ -1922,7 +1963,9 @@ function evCoords(e) {
   else                            { cx=e.clientX;                     cy=e.clientY; }
   const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
   const sx=(cx-rect.left)*scaleX, sy=(cy-rect.top)*scaleY;
-  return {screenX:sx,screenY:sy,...s2w(sx,sy)};
+  const raw = s2w(sx,sy);
+  const corrected = _calInverse(raw.x, raw.y);
+  return {screenX:sx,screenY:sy,x:corrected.wx,y:corrected.wy};
 }
 function onWheel(e) {
   e.preventDefault();
@@ -1940,11 +1983,13 @@ function onKeyDown(e) {
   }
   if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); undo(); }
   if(e.key==='Escape'){
+    if(typeof calMode!=='undefined'&&calMode) exitCalibration();
     if(pathDrawing) cancelPath();
     if(pendingEventType) cancelPlacement();
     circleP1=null; drawing=false; preview=null; draw();
   }
   if(e.key==='z'&&!e.ctrlKey&&!e.metaKey&&!e.target.matches('input,textarea,select')) toggleOverlayCanvas();
+  if(e.key==='p'&&!e.ctrlKey&&!e.metaKey&&!e.target.matches('input,textarea,select')) togglePlayPause();
 }
 function onKeyUp(e){ if(e.code==='Space'){ spaceDown=false; canvas.style.cursor='crosshair'; } }
 
@@ -1956,6 +2001,21 @@ function getTouchMid(t1,t2,rect,sx,sy){ return {x:((t1.clientX+t2.clientX)/2-rec
 
 function onPointerDown(e) {
   e.preventDefault();
+
+  // CALIBRATION MODE: intercept click
+  if (calMode) {
+    if (!e.touches || e.touches.length === 1) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      let cx = e.touches ? e.touches[0].clientX : e.clientX;
+      let cy = e.touches ? e.touches[0].clientY : e.clientY;
+      const sx = (cx - rect.left) * scaleX;
+      const sy = (cy - rect.top)  * scaleY;
+      handleCalClick(sx, sy);
+    }
+    return;
+  }
 
   // PLACEMENT MODE: intercept click
   if (pendingEventType) {
@@ -2083,16 +2143,28 @@ function onPointerLeave() {
 }
 
 function onDblClick(e) {
-  if(state.mode==='path'&&pathDrawing&&pathPoints.length>=2){
-    const shapes=getActiveShapes();
-    if(shapes){
-      const rotIdx=getNextRotationIndex(state.activeTeamId);
-      // VOD paths ALWAYS store {x,y,t}
-      const shape={type:'path',points:[...pathPoints],tag:'rotation',time:pathPoints[0]?.t??state.time,rotation_index:rotIdx};
-      shapes.push(shape); queueForSave(shape);
-    }
-    cancelPath(); draw(); renderTimelineMarkers();
+  // dblclick kept as fallback; right-click is the preferred finish gesture
+  if(state.mode==='path'&&pathDrawing&&pathPoints.length>=2) _finishPath();
+}
+
+function onRightClick(e) {
+  e.preventDefault(); // suppress browser context menu on canvas
+  if(state.mode==='path'&&pathDrawing){
+    if(pathPoints.length>=2) _finishPath();
+    else cancelPath();
+    return;
   }
+}
+
+function _finishPath() {
+  const shapes=getActiveShapes();
+  if(shapes){
+    const rotIdx=getNextRotationIndex(state.activeTeamId);
+    // VOD paths ALWAYS store {x,y,t}
+    const shape={type:'path',points:[...pathPoints],tag:'rotation',time:pathPoints[0]?.t??state.time,rotation_index:rotIdx};
+    shapes.push(shape); queueForSave(shape);
+  }
+  cancelPath(); draw(); renderTimelineMarkers();
 }
 
 function cancelPath() {
@@ -2181,7 +2253,12 @@ function draw() {
 
   if(mapImg.complete&&mapImg.naturalWidth>0){
     ctx.globalAlpha = mapOpacity;
-    ctx.drawImage(mapImg,0,0,WORLD_W,WORLD_H);
+    // Use calibration transform if active, else manual offset inputs
+    const _ox = calActive ? calTx/zoom : mapOffsetX;
+    const _oy = calActive ? calTy/zoom : mapOffsetY;
+    const _sw = calActive ? WORLD_W*(calSx/zoom) : WORLD_W*mapScaleFactor;
+    const _sh = calActive ? WORLD_H*(calSy/zoom) : WORLD_H*mapScaleFactor;
+    ctx.drawImage(mapImg, _ox, _oy, _sw, _sh);
     ctx.globalAlpha = 1;
   } else {
     ctx.globalAlpha = mapOpacity * 0.88;
@@ -2380,6 +2457,216 @@ function setMapOpacity(val) {
 }
 
 // ══════════════════════════════════════════════════════
+// MAP ALIGNMENT (offset + scale)
+// ══════════════════════════════════════════════════════
+function updateMapOffset() {
+  mapOffsetX   = parseFloat(document.getElementById('map-offset-x').value)  || 0;
+  mapOffsetY   = parseFloat(document.getElementById('map-offset-y').value)  || 0;
+  mapScaleFactor = parseFloat(document.getElementById('map-scale-f').value) || 1.0;
+  draw();
+}
+function resetMapOffset() {
+  mapOffsetX = 0; mapOffsetY = 0; mapScaleFactor = 1.0;
+  document.getElementById('map-offset-x').value = 0;
+  document.getElementById('map-offset-y').value = 0;
+  document.getElementById('map-scale-f').value  = '1.00';
+  draw();
+}
+
+
+// ══════════════════════════════════════════════════════
+// CALIBRATION TOOL — 2-point map alignment
+// ══════════════════════════════════════════════════════
+
+// Hardcoded landmark world coordinates per map (0-2048 space)
+// These are visually distinct, spread-apart locations easy to identify on stream
+const MAP_LANDMARKS = {
+  erangel: [
+    { name: 'School',    wx: 1400, wy:  820 },
+    { name: 'Pochinki',  wx:  990, wy: 1200 },
+  ],
+  miramar: [
+    { name: 'Los Leones', wx: 1320, wy: 1380 },
+    { name: 'El Pozo',    wx:  620, wy:  820 },
+  ],
+  sanhok: [
+    { name: 'Bootcamp',   wx: 1050, wy:  680 },
+    { name: 'Paradise',   wx:  560, wy: 1350 },
+  ],
+  rondo: [
+    { name: 'Borealis',   wx: 1200, wy:  700 },
+    { name: 'Cosmodrome', wx:  700, wy: 1400 },
+  ],
+};
+
+let calMode       = false;
+let calStep       = 0;   // 0 = waiting pt1, 1 = waiting pt2, 2 = done
+let calClicks     = [];  // [{sx,sy}] — screen clicks from user
+let calLandmarks  = [];  // [{wx,wy,name}] — world coords for current map
+
+// Derived calibration transform (applied in drawImage + inverse in s2w)
+// calTx: offsetX, calTy: offsetY, calSx: scaleX, calSy: scaleY
+let calTx=0, calTy=0, calSx=1, calSy=1;
+let calActive = false; // true once calibration has been computed
+
+function toggleCalibration() {
+  if (calMode) { exitCalibration(); return; }
+  enterCalibration();
+}
+
+function enterCalibration() {
+  const mapKey = state.mapKey || 'erangel';
+  const landmarks = MAP_LANDMARKS[mapKey];
+  if (!landmarks) { toast('No landmarks defined for this map', 'warn'); return; }
+
+  calMode      = true;
+  calStep      = 0;
+  calClicks    = [];
+  calLandmarks = landmarks;
+
+  document.getElementById('btn-calibrate').classList.add('active');
+  renderCalLandmarks();
+  updateCalBanner();
+  toast('CALIBRATION: Click where ' + landmarks[0].name + ' is on the stream', 'warn');
+}
+
+function exitCalibration() {
+  calMode = false;
+  calStep = 0;
+  calClicks = [];
+  document.getElementById('btn-calibrate').classList.remove('active');
+  document.getElementById('cal-overlay').innerHTML = '';
+  document.getElementById('cal-banner').classList.remove('show');
+}
+
+function handleCalClick(screenX, screenY) {
+  if (!calMode || calStep >= 2) return;
+
+  calClicks.push({ sx: screenX, sy: screenY });
+
+  // Mark this landmark as placed in the DOM
+  const el = document.getElementById('cal-lm-' + calStep);
+  if (el) {
+    el.classList.add('placed');
+    el.style.left = (screenX / canvas.width * 100) + '%';
+    el.style.top  = (screenY / canvas.height * 100) + '%';
+  }
+
+  calStep++;
+
+  if (calStep === 1) {
+    updateCalBanner();
+    toast('Good! Now click where ' + calLandmarks[1].name + ' is', 'warn');
+  } else if (calStep === 2) {
+    computeCalibration();
+  }
+}
+
+function computeCalibration() {
+  const lm = calLandmarks;
+  const cl = calClicks;
+
+  // World distance between the two landmarks
+  const dwx = lm[1].wx - lm[0].wx;
+  const dwy = lm[1].wy - lm[0].wy;
+
+  // Screen distance between the two clicks (in canvas pixels)
+  const dsx = cl[1].sx - cl[0].sx;
+  const dsy = cl[1].sy - cl[0].sy;
+
+  // Scale per axis: how many canvas pixels per world unit
+  // We need scaleX and scaleY separately to handle aspect ratio differences
+  calSx = dwx !== 0 ? dsx / dwx : calSx;
+  calSy = dwy !== 0 ? dsy / dwy : calSy;
+
+  // Offset: where does world origin (0,0) land on screen?
+  // screenX = wx * calSx + calTx  =>  calTx = screenX - wx * calSx
+  calTx = cl[0].sx - lm[0].wx * calSx;
+  calTy = cl[0].sy - lm[0].wy * calSy;
+
+  calActive = true;
+
+  // Update the manual inputs to reflect computed values
+  document.getElementById('map-offset-x').value = calTx.toFixed(1);
+  document.getElementById('map-offset-y').value = calTy.toFixed(1);
+  document.getElementById('map-scale-f').value   = ((calSx + calSy) / 2).toFixed(3);
+
+  draw();
+  exitCalibration();
+  toast('✓ Map calibrated — drawing coords corrected', 'ok');
+}
+
+function renderCalLandmarks() {
+  const overlay = document.getElementById('cal-overlay');
+  overlay.innerHTML = '';
+  calLandmarks.forEach((lm, i) => {
+    // Compute where this landmark currently sits on screen using current transform
+    const sx = lm.wx * calSx + calTx;
+    const sy = lm.wy * calSy + calTy;
+    const pctX = sx / canvas.width  * 100;
+    const pctY = sy / canvas.height * 100;
+
+    const el = document.createElement('div');
+    el.className = 'cal-landmark';
+    el.id = 'cal-lm-' + i;
+    el.style.left = pctX + '%';
+    el.style.top  = pctY + '%';
+    el.innerHTML = `
+      <div class="cal-landmark-ring"><div class="cal-landmark-dot"></div></div>
+      <div class="cal-landmark-label">${i+1}. ${lm.name}</div>
+    `;
+    overlay.appendChild(el);
+  });
+}
+
+function updateCalBanner() {
+  const banner = document.getElementById('cal-banner');
+  if (!calMode) { banner.classList.remove('show'); return; }
+  const lm = calLandmarks[calStep];
+  if (!lm) { banner.classList.remove('show'); return; }
+  banner.innerHTML = `
+    CALIBRATION MODE — STEP ${calStep+1} OF 2<br>
+    Click where <strong>${lm.name}</strong> appears on the stream map<br>
+    <span style="opacity:.6">ESC to cancel</span>
+  `;
+  banner.classList.add('show');
+}
+
+// ── Override s2w to apply inverse calibration when active ──
+// The original s2w uses pan/zoom. In VOD we also need to undo calTx/calTy/calSx/calSy
+// so shapes end up in correct world space regardless of calibration.
+// This is applied automatically inside evCoords via _calInverse.
+function _calInverse(wx, wy) {
+  if (!calActive) return { wx, wy };
+  // After s2w we have coords in the zoomed world space.
+  // With cal, the map is drawn at: drawImage(img, calTx/zoom, calTy/zoom, W*calSx/zoom, H*calSy/zoom)
+  // So a world coord wx (post s2w) maps to real world X as:
+  //   wx_real = (wx - calTx/zoom) / (calSx/zoom)
+  //           = (wx * zoom - calTx) / calSx
+  // We need to express this cleanly:
+  const wxReal = (wx - calTx / zoom) / (calSx / zoom);
+  const wyReal = (wy - calTy / zoom) / (calSy / zoom);
+  return { wx: wxReal, wy: wyReal };
+}
+
+// ══════════════════════════════════════════════════════
+// PLAY / PAUSE TOGGLE (accessible while overlay is on)
+// ══════════════════════════════════════════════════════
+let _isPlaying = false;
+function togglePlayPause() {
+  if (!ytPlayer || !_ytPlayerReady) { toast('Load a video first','warn'); return; }
+  if (_isPlaying) { ytPlayer.pauseVideo(); _isPlaying = false; }
+  else            { ytPlayer.playVideo();  _isPlaying = true; }
+  _syncPlayPauseBtn();
+}
+function _syncPlayPauseBtn() {
+  const btn = document.getElementById('btn-play-pause');
+  if (!btn) return;
+  btn.textContent = _isPlaying ? '⏸ PAUSE' : '⏯ PLAY';
+  btn.classList.toggle('active', _isPlaying);
+}
+
+// ══════════════════════════════════════════════════════
 // MAP SYSTEM
 // ══════════════════════════════════════════════════════
 function getMapSrc(key) {
@@ -2406,14 +2693,14 @@ function loadMapKey(key) {
 // SHAPE SERIALIZATION
 // ══════════════════════════════════════════════════════
 function shapeToDbRow(shape, teamId, matchId) {
-  const base={team_id:teamId,match_id:matchId,user_id:currentUser?.id,type:shape.type,tag:shape.tag,time_seconds:shape.time};
+  const base={team_id:teamId,match_id:matchId,user_id:currentUser?.id,type:shape.type,tag:shape.tag,time_seconds:Math.round(shape.time||0)};
   if(shape.type==='circle'){
     const m=matches.find(x=>x.id===matchId);
-    return {...base,team_id:null,cx:shape.cx,cy:shape.cy,radius:shape.r,zone_phase:shape.zone_phase||1,zone_type:'white',map_key:m?.map_key||state.mapKey};
+    return {...base,team_id:null,cx:shape.cx,cy:shape.cy,radius:shape.r,zone_phase:parseInt(shape.zone_phase||1,10),zone_type:'white',map_key:m?.map_key||state.mapKey};
   }
-  if(shape.type==='line')  return {...base,x1:shape.x1,y1:shape.y1,x2:shape.x2,y2:shape.y2};
-  if(shape.type==='path')  return {...base,path_points:JSON.stringify(shape.points)};
-  if(shape.type==='pin')   return {...base,pin_x:shape.x,pin_y:shape.y,label:shape.label};
+  if(shape.type==='line')  return {...base,x1:shape.x1,y1:shape.y1,x2:shape.x2,y2:shape.y2,rotation_index:parseInt(shape.rotation_index||1,10)};
+  if(shape.type==='path')  return {...base,path_points:JSON.stringify(shape.points),rotation_index:parseInt(shape.rotation_index||1,10)};
+  if(shape.type==='pin')   return {...base,pin_x:shape.x,pin_y:shape.y,label:shape.label||''};
   if(shape.type==='fight') return {...base,pin_x:shape.x,pin_y:shape.y,fight_team_a:shape.teamA,fight_team_b:shape.teamB};
   return base;
 }
