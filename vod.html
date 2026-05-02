@@ -444,17 +444,29 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
   border-radius:10px;padding:12px 24px;font-family:var(--font-mono);font-size:10px;
   letter-spacing:.07em;text-transform:uppercase;pointer-events:none;
   display:none;text-align:center;line-height:2;
-  transition:background .3s,border-color .3s,color .3s;
+  transition:border-color .25s,color .25s;
+  background:#040c1a;
+  box-shadow:0 4px 24px rgba(0,0,0,.7);
 }
 #cal-banner.show{ display:block; }
-#cal-banner.phase1{
-  background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.45);color:var(--orange);
+#cal-banner.phase1{ border:1.5px solid rgba(251,146,60,.7);color:var(--orange); }
+#cal-banner.phase2{ border:1.5px solid rgba(34,211,238,.65);color:var(--accent); }
+#cal-banner.done  { border:1.5px solid rgba(74,222,128,.65);color:var(--green); }
+/* ── Loupe (magnifier) ── */
+#cal-loupe-wrap{
+  position:absolute;pointer-events:none;z-index:35;display:none;
+  transform:translateX(-50%);
 }
-#cal-banner.phase2{
-  background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.4);color:var(--accent);
+#cal-loupe-canvas{
+  border-radius:50%;
+  display:block;
+  box-shadow:0 0 0 2px rgba(255,255,255,.15), 0 4px 20px rgba(0,0,0,.6);
 }
-#cal-banner.done{
-  background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.45);color:var(--green);
+#cal-loupe-label{
+  position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  font-family:var(--font-mono);font-size:8px;color:var(--muted);
+  letter-spacing:.08em;white-space:nowrap;text-transform:uppercase;
+  background:#040c1a;padding:2px 6px;border-radius:3px;
 }
 .cal-step-pills{
   display:flex;justify-content:center;gap:6px;margin-bottom:6px;
@@ -595,6 +607,11 @@ body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
       <!-- Calibration overlay -->
       <div id="cal-overlay"></div>
       <div id="cal-banner"></div>
+      <!-- Calibration loupe -->
+      <div id="cal-loupe-wrap">
+        <canvas id="cal-loupe-canvas" width="160" height="160"></canvas>
+        <div id="cal-loupe-label">4× ZOOM</div>
+      </div>
 
       <!-- Placement banner -->
       <div id="placement-banner">
@@ -2538,6 +2555,7 @@ function enterCalibration() {
   document.getElementById('btn-calibrate').classList.add('active');
   updateCalBanner();
   toast('CALIBRATE — click any 2 spots you can ID on the VIDEO', 'warn');
+  canvas.addEventListener('mousemove', _onCalMouseMove);
 }
 
 function exitCalibration() {
@@ -2550,6 +2568,8 @@ function exitCalibration() {
   document.getElementById('cal-overlay').innerHTML = '';
   const banner = document.getElementById('cal-banner');
   banner.classList.remove('show','phase1','phase2','done');
+  document.getElementById('cal-loupe-wrap').style.display = 'none';
+  canvas.removeEventListener('mousemove', _onCalMouseMove);
 }
 
 // Internal: set map opacity without updating the slider state permanently
@@ -2558,6 +2578,87 @@ function _applyOpacity(val) {
   document.getElementById('map-opacity-slider').value = val;
   document.getElementById('map-opacity-val').textContent = val + '%';
   draw();
+}
+
+// ── Loupe (magnifier) ──
+function _onCalMouseMove(e) {
+  if (!calMode || calPhase === 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const cssSx = e.clientX - rect.left;
+  const cssSy = e.clientY - rect.top;
+  const canvasSx = cssSx * (canvas.width / rect.width);
+  const canvasSy = cssSy * (canvas.height / rect.height);
+  _updateLoupe(canvasSx, canvasSy, cssSx, cssSy);
+}
+
+function _updateLoupe(canvasSx, canvasSy, cssSx, cssSy) {
+  const wrap  = document.getElementById('cal-loupe-wrap');
+  const lc    = document.getElementById('cal-loupe-canvas');
+  if (!wrap || !lc) return;
+
+  const DIAM   = 160;
+  const ZOOM_F = 4;
+  const srcSz  = DIAM / ZOOM_F; // canvas pixels to sample
+
+  // Position: horizontally centred on cursor, 20px above it
+  wrap.style.display = 'block';
+  wrap.style.left    = cssSx + 'px';
+  wrap.style.top     = (cssSy - DIAM - 20) + 'px';
+
+  const lCtx = lc.getContext('2d');
+  lCtx.clearRect(0, 0, DIAM, DIAM);
+
+  // Circular clip
+  lCtx.save();
+  lCtx.beginPath();
+  lCtx.arc(DIAM/2, DIAM/2, DIAM/2, 0, Math.PI*2);
+  lCtx.clip();
+
+  // Dark fill first (so edges look clean)
+  lCtx.fillStyle = '#040c1a';
+  lCtx.fillRect(0, 0, DIAM, DIAM);
+
+  // In phase 1 (map faded to 12%), boost brightness so structure is visible
+  if (calPhase === 1) lCtx.filter = 'brightness(5)';
+  lCtx.drawImage(
+    canvas,
+    canvasSx - srcSz/2, canvasSy - srcSz/2, srcSz, srcSz,
+    0, 0, DIAM, DIAM
+  );
+  lCtx.filter = 'none';
+  lCtx.restore();
+
+  // Crosshair
+  const col = calPhase === 1 ? '#fb923c' : '#22d3ee';
+  lCtx.strokeStyle = col;
+  lCtx.lineWidth = 1;
+  lCtx.setLineDash([4, 3]);
+  lCtx.beginPath();
+  lCtx.moveTo(DIAM/2, DIAM/2 - 14); lCtx.lineTo(DIAM/2, DIAM/2 + 14);
+  lCtx.moveTo(DIAM/2 - 14, DIAM/2); lCtx.lineTo(DIAM/2 + 14, DIAM/2);
+  lCtx.stroke();
+  lCtx.setLineDash([]);
+
+  // Centre dot
+  lCtx.fillStyle = col;
+  lCtx.beginPath();
+  lCtx.arc(DIAM/2, DIAM/2, 2, 0, Math.PI*2);
+  lCtx.fill();
+
+  // Border ring
+  lCtx.strokeStyle = col;
+  lCtx.lineWidth = 2;
+  lCtx.beginPath();
+  lCtx.arc(DIAM/2, DIAM/2, DIAM/2 - 1, 0, Math.PI*2);
+  lCtx.stroke();
+
+  // Label (which point are we on)
+  const phase1Count = calStreamClicks.length;
+  const phase2Count = calMapClicks.length;
+  const label = calPhase === 1
+    ? `VIDEO POINT ${phase1Count + 1}`
+    : `MAP POINT ${phase2Count + 1}`;
+  document.getElementById('cal-loupe-label').textContent = label;
 }
 
 // Convert a canvas-pixel click to map-image pixel using current transform
@@ -2686,10 +2787,12 @@ function renderCalOverlay() {
     svg.appendChild(line);
   }
 
-  // Draw stream points (phase 1)
-  calStreamClicks.forEach((p,i) => makeDot(p.sx, p.sy, 'stream', `VIDEO ${i+1}`));
-  if (calStreamClicks.length === 2)
-    makeLine(calStreamClicks[0].sx, calStreamClicks[0].sy, calStreamClicks[1].sx, calStreamClicks[1].sy, '#fb923c');
+  // Draw stream points (phase 1 only — hide them once we move to map phase)
+  if (calPhase === 1) {
+    calStreamClicks.forEach((p,i) => makeDot(p.sx, p.sy, 'stream', `VIDEO ${i+1}`));
+    if (calStreamClicks.length === 2)
+      makeLine(calStreamClicks[0].sx, calStreamClicks[0].sy, calStreamClicks[1].sx, calStreamClicks[1].sy, '#fb923c');
+  }
 
   // Draw map points (phase 2)
   calMapClicks.forEach((p,i) => makeDot(p.sx, p.sy, 'mappt', `MAP ${i+1}`));
