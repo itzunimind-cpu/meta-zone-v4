@@ -755,6 +755,7 @@ let filters = { zone:true, fight:true, rotation:true, pin:true };
 
 // VOD-specific state
 let ytPlayer          = null;
+let _ytPlayerReady    = false;   // true only after onReady fires — guards loadVideoById calls
 let vodStartOffset    = 0;     // seconds into video = match start
 let matchActive       = false; // true after START MATCH
 let matchTime         = 0;     // current match time in seconds
@@ -937,6 +938,7 @@ function _createYTPlayer(videoId) {
     playerVars: { rel:0, modestbranding:1, origin: window.location.origin },
     events: {
       onReady: (e) => {
+        _ytPlayerReady = true;
         if (_ytPendingVideoId) {
           e.target.loadVideoById(_ytPendingVideoId);
           _ytPendingVideoId = null;
@@ -964,18 +966,20 @@ function loadVideo() {
   if (!videoId) { toast('Invalid YouTube URL','err'); return; }
   vodUrl = url;
 
-  if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
-    // Player already warm — instant load
+  if (ytPlayer && _ytPlayerReady) {
+    // Player is warm and ready — instant load
     ytPlayer.loadVideoById(videoId);
     toast('Video loading…','ok');
     document.getElementById('btn-start-match').disabled = !state.matchId;
   } else {
-    // Player not ready yet — queue it; onReady will pick it up
+    // Player exists but not ready yet (or hasn't been created) — queue it; onReady will pick it up
     _ytPendingVideoId = videoId;
-    toast('YouTube player warming up, video will start shortly…','ok');
+    toast('YouTube player warming up — video will start in a moment…','ok');
+    // Only create a new player if one hasn't been created at all
     if (typeof YT !== 'undefined' && YT.Player && !ytPlayer) {
       _createYTPlayer(null);
     }
+    // If ytPlayer exists but _ytPlayerReady is false, onReady will fire soon and load _ytPendingVideoId
   }
 }
 
