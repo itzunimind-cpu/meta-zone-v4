@@ -128,6 +128,14 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 .speed-btn:hover{ color:var(--text); }
 .speed-btn.active{ border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
 
+/* ── MAP OPACITY SLIDER ── */
+.map-opacity-cluster{ display:flex;align-items:center;gap:5px;flex-shrink:0;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0 8px;height:30px; }
+.map-opacity-label{ font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap; }
+.map-opacity-slider{ -webkit-appearance:none;appearance:none;width:72px;height:3px;background:var(--border);border-radius:2px;outline:none;cursor:pointer; }
+.map-opacity-slider::-webkit-slider-thumb{ -webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform .15s; }
+.map-opacity-slider::-webkit-slider-thumb:hover{ transform:scale(1.25); }
+.map-opacity-val{ font-family:var(--font-mono);font-size:9px;color:var(--accent);min-width:28px;text-align:right; }
+
 /* ── VOD BODY ── */
 #vod-app{ flex:1;display:flex;flex-direction:column;overflow:hidden; }
 #vod-body{ flex:1;display:flex;overflow:hidden; }
@@ -479,6 +487,11 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 
     <!-- Overlay Toggle -->
     <button class="tb-btn active" id="btn-overlay" onclick="toggleOverlayCanvas()" title="Toggle map overlay (Z)">👁 MAP</button>
+    <div class="map-opacity-cluster" id="map-opacity-cluster" title="Map opacity">
+      <span class="map-opacity-label">MAP α</span>
+      <input type="range" class="map-opacity-slider" id="map-opacity-slider" min="0" max="100" value="62" oninput="setMapOpacity(this.value)">
+      <span class="map-opacity-val" id="map-opacity-val">62%</span>
+    </div>
 
     <!-- Save -->
     <button class="tb-btn" id="btn-save" onclick="manualSave()">💾 SAVE</button>
@@ -763,6 +776,7 @@ let matchTime         = 0;     // current match time in seconds
 let vodUrl            = '';
 let pollInterval      = null;
 let overlayVisible    = true;
+let mapOpacity        = 0.62;
 let pendingEventType  = null;  // 'elim'|'loss'|'wipe'|'ewipe'
 let pendingEventCoords = null; // {wx, wy} from placement click
 
@@ -949,14 +963,23 @@ function _createYTPlayer(videoId) {
   // Fallback: if onReady postMessage never fires (some network/origin configs),
   // force-ready after 5s so the button is never stuck disabled.
   clearTimeout(window._ytReadyFallback);
+  clearInterval(window._ytTimeSyncInterval);
   window._ytReadyFallback = setTimeout(() => {
     if (!_ytPlayerReady) {
       _ytPlayerReady = true;
       toast('Video ready — scrub to match start, then press START MATCH', 'ok');
       const btn = document.getElementById('btn-start-match');
       if (btn) btn.disabled = !state.matchId;
+      // Also start sync loop from fallback path
+      window._ytTimeSyncInterval = setInterval(() => {
+        const fr = document.getElementById('yt-iframe');
+        if (fr && fr.contentWindow) {
+          fr.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+          fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'getCurrentTime', args: [], id: 1 }), '*');
+        }
+      }, 150);
     }
-  }, 5000);
+  }, 2000);
 
   // Proxy object — every method sends a postMessage command to the iframe
   ytPlayer = {
@@ -984,13 +1007,36 @@ function _onYTMessage(event) {
 
   if (data.event === 'onReady') {
     _ytPlayerReady = true;
+    // Ask YT iframe to start pushing infoDelivery updates (works even when paused)
+    const ifrm = document.getElementById('yt-iframe');
+    if (ifrm && ifrm.contentWindow) {
+      ifrm.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+    }
     toast('Video loaded — scrub to match start, then press START MATCH', 'ok');
     const btn = document.getElementById('btn-start-match');
     if (btn) btn.disabled = !state.matchId;
+    // Keep _ytCurrentTime fresh — send both 'listening' + getDuration command every 150ms
+    clearInterval(window._ytTimeSyncInterval);
+    window._ytTimeSyncInterval = setInterval(() => {
+      const fr = document.getElementById('yt-iframe');
+      if (fr && fr.contentWindow) {
+        fr.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+        // Some YT builds need an explicit command to push infoDelivery with currentTime
+        fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'getCurrentTime', args: [], id: 1 }), '*');
+      }
+    }, 150);
   }
 
-  if (data.event === 'infoDelivery' && data.info && data.info.currentTime !== undefined) {
-    _ytCurrentTime = data.info.currentTime;
+  if (data.event === 'infoDelivery' && data.info) {
+    if (data.info.currentTime !== undefined) _ytCurrentTime = data.info.currentTime;
+  }
+
+  // On state change (play/pause/seek), force a fresh time read
+  if (data.event === 'onStateChange') {
+    const fr = document.getElementById('yt-iframe');
+    if (fr && fr.contentWindow) {
+      fr.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+    }
   }
 }
 
@@ -2134,9 +2180,13 @@ function draw() {
   ctx.translate(panX,panY); ctx.scale(zoom,zoom);
 
   if(mapImg.complete&&mapImg.naturalWidth>0){
+    ctx.globalAlpha = mapOpacity;
     ctx.drawImage(mapImg,0,0,WORLD_W,WORLD_H);
+    ctx.globalAlpha = 1;
   } else {
+    ctx.globalAlpha = mapOpacity * 0.88;
     ctx.fillStyle='#050a10'; ctx.fillRect(0,0,WORLD_W,WORLD_H);
+    ctx.globalAlpha = 1;
     ctx.fillStyle='#1e3a5f'; ctx.font=`${14/zoom}px JetBrains Mono,monospace`;
     ctx.fillText('SELECT A MAP',40/zoom,60/zoom);
   }
@@ -2319,7 +2369,14 @@ function toggleOverlayCanvas() {
   const btn = document.getElementById('btn-overlay');
   btn.classList.toggle('active', overlayVisible);
   btn.textContent = overlayVisible ? '👁 MAP' : '👁 MAP OFF';
+  document.getElementById('map-opacity-cluster').style.opacity = overlayVisible ? '1' : '0.35';
   if(overlayVisible) draw();
+}
+
+function setMapOpacity(val) {
+  mapOpacity = parseInt(val) / 100;
+  document.getElementById('map-opacity-val').textContent = val + '%';
+  draw();
 }
 
 // ══════════════════════════════════════════════════════
