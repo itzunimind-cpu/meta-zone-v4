@@ -2014,6 +2014,7 @@ function evCoords(e) {
 }
 function onWheel(e) {
   e.preventDefault();
+  if (calMode) return; // no zoom while calibrating
   const rect=canvas.getBoundingClientRect();
   zoomAt((e.clientX-rect.left)*(canvas.width/rect.width),(e.clientY-rect.top)*(canvas.height/rect.height),e.deltaY<0?.15:-.13);
 }
@@ -2299,10 +2300,11 @@ function draw() {
   if(mapImg.complete&&mapImg.naturalWidth>0){
     ctx.globalAlpha = mapOpacity;
     // Use calibration transform if active, else manual offset inputs
-    const _ox = calActive ? calTx/zoom : mapOffsetX;
-    const _oy = calActive ? calTy/zoom : mapOffsetY;
-    const _sw = calActive ? WORLD_W*(calSx/zoom) : WORLD_W*mapScaleFactor;
-    const _sh = calActive ? WORLD_H*(calSy/zoom) : WORLD_H*mapScaleFactor;
+    // calTx/calTy/calSx/calSy are stored in world space — use directly (no /zoom needed)
+    const _ox = calActive ? calTx : mapOffsetX;
+    const _oy = calActive ? calTy : mapOffsetY;
+    const _sw = calActive ? WORLD_W * calSx : WORLD_W * mapScaleFactor;
+    const _sh = calActive ? WORLD_H * calSy : WORLD_H * mapScaleFactor;
     ctx.drawImage(mapImg, _ox, _oy, _sw, _sh);
     ctx.globalAlpha = 1;
   } else {
@@ -2668,8 +2670,9 @@ function _screenToMapPx(sx, sy) {
   const wy = (sy - panY) / zoom;
   let mx, my;
   if (calActive) {
-    mx = (wx - calTx / zoom) / (calSx / zoom);
-    my = (wy - calTy / zoom) / (calSy / zoom);
+    // calTx/calTy/calSx/calSy are world-space — wx is already world-space
+    mx = (wx - calTx) / calSx;
+    my = (wy - calTy) / calSy;
   } else {
     mx = (wx - mapOffsetX) / mapScaleFactor;
     my = (wy - mapOffsetY) / mapScaleFactor;
@@ -2720,14 +2723,18 @@ function computeCalibration() {
 
   const dmx = mb.mx - ma.mx;
   const dmy = mb.my - ma.my;
-  const dsx = sb.sx - sa.sx;
-  const dsy = sb.sy - sa.sy;
+  // Convert stream canvas-px deltas to world space for a zoom-stable result
+  const dsx = (sb.sx - sa.sx) / zoom;
+  const dsy = (sb.sy - sa.sy) / zoom;
 
-  // Solve: screen_x = mx * calSx + calTx + panX
+  // Solve in world space: world_x = mx * calSx + calTx
   if (Math.abs(dmx) > 2) calSx = dsx / dmx;
   if (Math.abs(dmy) > 2) calSy = dsy / dmy;
-  calTx = sa.sx - ma.mx * calSx - panX;
-  calTy = sa.sy - ma.my * calSy - panY;
+  // calTx/calTy are world-space offsets (same units as mapOffsetX/Y)
+  const sa_wx = (sa.sx - panX) / zoom;
+  const sa_wy = (sa.sy - panY) / zoom;
+  calTx = sa_wx - ma.mx * calSx;
+  calTy = sa_wy - ma.my * calSy;
 
   calActive = true;
 
@@ -2852,20 +2859,15 @@ function updateCalBanner() {
   banner.classList.add('show');
 }
 
-// ── Override s2w to apply inverse calibration when active ──
-// The original s2w uses pan/zoom. In VOD we also need to undo calTx/calTy/calSx/calSy
-// so shapes end up in correct world space regardless of calibration.
-// This is applied automatically inside evCoords via _calInverse.
+// ── Inverse calibration for evCoords ──
+// calTx/calTy/calSx/calSy are world-space. s2w gives us world coords.
+// The map is drawn at: drawImage(img, calTx, calTy, W*calSx, H*calSy) in world space.
+// So to get map-image coords from world coords: mx = (wx - calTx) / calSx
+// _calInverse converts world-click → corrected world position (same as what map uses).
 function _calInverse(wx, wy) {
   if (!calActive) return { wx, wy };
-  // After s2w we have coords in the zoomed world space.
-  // With cal, the map is drawn at: drawImage(img, calTx/zoom, calTy/zoom, W*calSx/zoom, H*calSy/zoom)
-  // So a world coord wx (post s2w) maps to real world X as:
-  //   wx_real = (wx - calTx/zoom) / (calSx/zoom)
-  //           = (wx * zoom - calTx) / calSx
-  // We need to express this cleanly:
-  const wxReal = (wx - calTx / zoom) / (calSx / zoom);
-  const wyReal = (wy - calTy / zoom) / (calSy / zoom);
+  const wxReal = (wx - calTx) / calSx;
+  const wyReal = (wy - calTy) / calSy;
   return { wx: wxReal, wy: wyReal };
 }
 
