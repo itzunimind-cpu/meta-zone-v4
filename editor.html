@@ -1050,6 +1050,22 @@ canvas.path-mode{ cursor:cell; }
 /* zoom label compat */
 #zoom-label{ display:none; }
 #sl-width,#sl-opacity{ margin:0; }
+
+/* ══ MATCH STATUS CHIP ══ */
+.match-status-chip{
+  display:flex;align-items:center;gap:6px;padding:5px 9px;
+  border-radius:5px;border:1px solid var(--border);background:var(--bg-card);
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;
+  margin-top:5px;transition:all .3s;
+}
+.match-status-chip.hidden{ display:none; }
+.msc-dot{ width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .3s; }
+.msc-label{ flex:1;color:var(--muted); }
+.msc-vod{ font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(34,211,238,.1);color:var(--accent);border:1px solid rgba(34,211,238,.3);margin-left:auto;white-space:nowrap; }
+.match-status-chip[data-level="empty"] .msc-dot{ background:var(--muted2); }
+.match-status-chip[data-level="partial"] .msc-dot{ background:var(--yellow); }
+.match-status-chip[data-level="complete"] .msc-dot{ background:var(--green); }
+.match-status-chip[data-level="complete"]{ border-color:rgba(74,222,128,.25); }
 </style>
 </head>
 <body>
@@ -1124,6 +1140,11 @@ canvas.path-mode{ cursor:cell; }
         <button class="btn-del" onclick="deleteSelected('match')" title="Delete match">✕</button>
       </div>
       <button class="btn-add-inline" onclick="addMatch()">+ ADD MATCH</button>
+      <div class="match-status-chip hidden" id="match-status-chip">
+        <div class="msc-dot"></div>
+        <span class="msc-label" id="msc-label">—</span>
+        <span class="msc-vod hidden" id="msc-vod">VOD ✓</span>
+      </div>
     </div>
 
     <!-- MAP -->
@@ -3287,6 +3308,7 @@ async function _activateMatch(match, statusMsg) {
 
   setStatus(statusMsg, true);
   setTimeout(() => setStatus('READY', true), 2000);
+  updateMatchStatusChip();
 }
 
 function refreshDropdowns() {
@@ -3298,7 +3320,42 @@ function refreshDropdowns() {
   dSel.innerHTML='<option value="">— select —</option>';
   days.filter(d=>d.tournament_id===state.tournamentId).forEach(d=>{ const o=new Option(d.name,d.id); if(d.id===state.dayId) o.selected=true; dSel.add(o); });
   mSel.innerHTML='<option value="">— select —</option>';
-  matches.filter(m=>m.day_id===state.dayId).forEach(m=>{ const o=new Option(m.name,m.id); if(m.id===state.matchId) o.selected=true; mSel.add(o); });
+  matches.filter(m=>m.day_id===state.dayId).forEach(m=>{
+    const st = _matchStatusLevel(m, teams.filter(t=>t.match_id===m.id));
+    const icon = st==='complete'?'✓ ':st==='partial'?'◐ ':'';
+    const o=new Option(icon+m.name,m.id);
+    if(m.id===state.matchId) o.selected=true;
+    mSel.add(o);
+  });
+  updateMatchStatusChip();
+}
+
+function _matchStatusLevel(match, matchTeams) {
+  if (!match) return 'empty';
+  const hasTeams = matchTeams && matchTeams.length > 0;
+  const hasWipes = matchTeams && matchTeams.some(t=>t.time_of_wipe!=null);
+  const hasDuration = match.duration_seconds != null;
+  if (hasDuration && hasWipes) return 'complete';
+  if (hasTeams) return 'partial';
+  return 'empty';
+}
+
+function updateMatchStatusChip() {
+  const chip = document.getElementById('match-status-chip');
+  const label = document.getElementById('msc-label');
+  const vodBadge = document.getElementById('msc-vod');
+  if (!chip) return;
+  if (!state.matchId) { chip.classList.add('hidden'); return; }
+  const m = matches.find(x=>x.id===state.matchId);
+  if (!m) { chip.classList.add('hidden'); return; }
+  const matchTeams = teams.filter(t=>t.match_id===state.matchId);
+  const level = _matchStatusLevel(m, matchTeams);
+  const labels = { empty:'NO DATA YET', partial:'IN PROGRESS', complete:'DATA COMPLETE' };
+  chip.classList.remove('hidden');
+  chip.dataset.level = level;
+  label.textContent = labels[level];
+  if (m.vod_start_offset != null) { vodBadge.classList.remove('hidden'); }
+  else { vodBadge.classList.add('hidden'); }
 }
 
 document.getElementById('sel-tournament').onchange=async function(){
@@ -3348,6 +3405,7 @@ document.getElementById('sel-match').onchange=async function(){
   renderTeamList(); draw(); updateRightPanel();
   renderAnnotationLog();
   renderTimelineTicks();
+  updateMatchStatusChip();
 };
 
 document.getElementById('in-team').onkeydown=e=>{
