@@ -484,6 +484,94 @@ body{ font-family:var(--font-body); background:var(--bg); color:var(--text); hei
 /* dim everything when in cal phase 1 */
 body.cal-phase1-active #yt-player-wrap{ filter:none; }
 body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
+
+/* ══ MATCH STATUS CHIP (toolbar) ══ */
+.tb-match-status{
+  display:flex;align-items:center;gap:5px;padding:3px 8px;
+  border:1px solid var(--border);border-radius:5px;background:var(--bg-card);
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;white-space:nowrap;flex-shrink:0;
+}
+.tb-match-status.hidden{ display:none; }
+.tms-dot{ width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+.tms-label{ color:var(--muted); }
+.tms-vod{ font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(34,211,238,.1);color:var(--accent);border:1px solid rgba(34,211,238,.25);margin-left:3px; }
+
+/* ══ SKIP TO MATCH START BANNER ══ */
+#skip-to-start-banner{
+  display:none;align-items:center;gap:10px;padding:7px 14px;
+  background:rgba(34,211,238,.08);border-bottom:1px solid rgba(34,211,238,.2);
+  font-family:var(--font-mono);font-size:11px;color:var(--accent);flex-shrink:0;
+}
+#skip-to-start-banner.show{ display:flex; }
+.stb-text{ flex:1;letter-spacing:.04em; }
+.btn-stb-skip{
+  height:26px;padding:0 12px;background:var(--accent);color:var(--bg);border:none;
+  border-radius:5px;font-family:var(--font-display);font-size:11px;font-weight:800;cursor:pointer;
+  transition:opacity .15s;white-space:nowrap;flex-shrink:0;
+}
+.btn-stb-skip:hover{ opacity:.85; }
+.btn-stb-dismiss{
+  height:26px;padding:0 10px;background:none;color:var(--muted);border:1px solid var(--border);
+  border-radius:5px;font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all .15s;flex-shrink:0;
+}
+.btn-stb-dismiss:hover{ color:var(--text); }
+
+/* ══ EDITOR DATA DIALOG ══ */
+#editor-data-dialog{
+  position:fixed;inset:0;background:rgba(2,6,23,.82);backdrop-filter:blur(6px);
+  z-index:600;display:none;align-items:center;justify-content:center;
+}
+#editor-data-dialog.show{ display:flex; }
+.edd-box{
+  background:var(--bg-panel);border:1px solid var(--green);border-radius:12px;
+  padding:28px;width:400px;display:flex;flex-direction:column;gap:16px;
+}
+.edd-icon{ font-size:28px;text-align:center; }
+.edd-title{ font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);text-align:center; }
+.edd-sub{ font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.7;text-align:center;letter-spacing:.03em; }
+.edd-data-summary{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:8px;
+  padding:12px 16px;display:flex;flex-direction:column;gap:6px;
+}
+.edd-data-row{ display:flex;justify-content:space-between;align-items:center; }
+.edd-data-key{ font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase; }
+.edd-data-val{ font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text); }
+.edd-data-val.ok{ color:var(--green); }
+.edd-actions{ display:flex;gap:10px; }
+.btn-edd-fresh{
+  flex:1;padding:11px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;letter-spacing:.04em;
+}
+.btn-edd-fresh:hover{ border-color:var(--red);color:var(--red); }
+.btn-edd-continue{
+  flex:2;padding:11px;background:var(--green);border:none;color:#020617;
+  border-radius:8px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;
+}
+.btn-edd-continue:hover{ opacity:.85; }
+
+/* ══ OFFSET OVERWRITE DIALOG ══ */
+#offset-overwrite-dialog{
+  position:fixed;inset:0;background:rgba(2,6,23,.82);backdrop-filter:blur(6px);
+  z-index:600;display:none;align-items:center;justify-content:center;
+}
+#offset-overwrite-dialog.show{ display:flex; }
+.owd-box{
+  background:var(--bg-panel);border:1px solid var(--orange);border-radius:12px;
+  padding:26px;width:360px;display:flex;flex-direction:column;gap:14px;
+}
+.owd-title{ font-family:var(--font-display);font-size:16px;font-weight:800;color:var(--orange); }
+.owd-sub{ font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.7;letter-spacing:.03em; }
+.owd-actions{ display:flex;gap:8px; }
+.btn-owd-cancel{
+  flex:1;padding:10px;background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:7px;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;
+}
+.btn-owd-cancel:hover{ border-color:var(--muted);color:var(--text); }
+.btn-owd-confirm{
+  flex:1;padding:10px;background:var(--orange);border:none;color:#020617;
+  border-radius:7px;font-family:var(--font-display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;
+}
+.btn-owd-confirm:hover{ opacity:.85; }
 </style>
 </head>
 <body>
@@ -506,11 +594,14 @@ body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
       <div class="logo-text">METAZONE</div>
     </a>
     <nav class="header-nav">
-      <a href="index.html" class="nav-link">Dashboard</a>
-      <a href="editor.html" class="nav-link">Editor</a>
-      <a href="vod.html" class="nav-link active">VOD Review</a>
-      <a href="analytics.html" class="nav-link">Analytics</a>
-      <a href="player.html" class="nav-link">Players</a>
+      <a href="index.html" class="nav-link">DASHBOARD</a>
+      <a href="editor.html" class="nav-link">EDITOR</a>
+      <a href="vod.html" class="nav-link active">VOD REVIEW</a>
+      <a href="tournament-create.html" class="nav-link">NEW TOURNAMENT</a>
+      <a href="tournament-editor.html" class="nav-link">TOURNAMENT EDITOR</a>
+      <a href="analytics.html" class="nav-link">TEAM ANALYTICS</a>
+      <a href="player.html" class="nav-link">PLAYER ANALYTICS</a>
+      <a href="history.html" class="nav-link">ALL TOURNAMENTS</a>
     </nav>
   </div>
   <div class="header-right">
@@ -538,6 +629,11 @@ body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
       <select class="tb-select" id="sel-match" onchange="onMatchChange(this.value)">
         <option value="">— Match —</option>
       </select>
+      <div class="tb-match-status hidden" id="tb-match-status">
+        <div class="tms-dot" id="tms-dot"></div>
+        <span class="tms-label" id="tms-label">—</span>
+        <span class="tms-vod hidden" id="tms-vod">VOD ✓</span>
+      </div>
       <div class="tb-divider"></div>
       <input class="tb-input" id="vod-url-input" placeholder="Paste YouTube URL…" onkeydown="if(event.key==='Enter')loadVideo()">
       <button class="tb-btn" onclick="loadVideo()">▶ LOAD</button>
@@ -594,6 +690,13 @@ body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
 
   <!-- VOD Body -->
   <div id="vod-body">
+
+    <!-- ══ SKIP TO MATCH START BANNER ══ -->
+    <div id="skip-to-start-banner">
+      <span class="stb-text" id="stb-text">⏱ This match has a saved start point — want to jump there?</span>
+      <button class="btn-stb-skip" onclick="skipToMatchStart()">JUMP TO MATCH START</button>
+      <button class="btn-stb-dismiss" onclick="dismissSkipBanner()">DISMISS</button>
+    </div>
 
     <!-- ── VOD STAGE (video + canvas) ── -->
     <div id="vod-stage">
@@ -806,6 +909,32 @@ body.cal-phase1-active #overlay-canvas{ cursor:crosshair; }
   </div>
 </div>
 
+<!-- ══ EDITOR DATA DETECTED DIALOG ══ -->
+<div id="editor-data-dialog">
+  <div class="edd-box">
+    <div class="edd-icon">📋</div>
+    <div class="edd-title">Editor Data Found</div>
+    <div class="edd-sub">This match was already filled in the Editor. You can continue reviewing with that data, or start a fresh VOD session (data is NOT deleted).</div>
+    <div class="edd-data-summary" id="edd-data-summary"></div>
+    <div class="edd-actions">
+      <button class="btn-edd-fresh" onclick="startFreshVodSession()">START FRESH</button>
+      <button class="btn-edd-continue" onclick="continueWithEditorData()">CONTINUE WITH DATA ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OFFSET OVERWRITE DIALOG ══ -->
+<div id="offset-overwrite-dialog">
+  <div class="owd-box">
+    <div class="owd-title">⚠ Match Start Already Set</div>
+    <div class="owd-sub" id="owd-sub">This match already has a saved start point. Pressing START MATCH will overwrite it. Are you sure?</div>
+    <div class="owd-actions">
+      <button class="btn-owd-cancel" onclick="document.getElementById('offset-overwrite-dialog').classList.remove('show')">CANCEL</button>
+      <button class="btn-owd-confirm" onclick="_confirmOffsetOverwrite()">OVERWRITE</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ SCRIPTS ══ -->
 <!-- YouTube IFrame API not used — player controlled via postMessage -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -906,6 +1035,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     currentUser = session.user;
     document.getElementById('auth-screen').classList.add('hidden');
     await loadAllData();
+    await applyUrlParams();
     initCanvas();
   } else {
     initCanvas();
@@ -917,6 +1047,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       currentUser = session.user;
       document.getElementById('auth-screen').classList.add('hidden');
       await loadAllData();
+      await applyUrlParams();
       draw();
     }
     if (event === 'SIGNED_OUT') {
@@ -926,7 +1057,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
   loadMapKey('erangel');
-  applyUrlParams();
 });
 
 // ══════════════════════════════════════════════════════
@@ -1055,6 +1185,11 @@ function _createYTPlayer(videoId) {
       toast('Video ready — scrub to match start, then press START MATCH', 'ok');
       const btn = document.getElementById('btn-start-match');
       if (btn) btn.disabled = !state.matchId;
+      // Show skip banner if waiting
+      if (window._pendingSkipOffset != null) {
+        _showSkipBanner(window._pendingSkipOffset);
+        window._pendingSkipOffset = null;
+      }
       // Also start sync loop from fallback path
       window._ytTimeSyncInterval = setInterval(() => {
         const fr = document.getElementById('yt-iframe');
@@ -1100,6 +1235,11 @@ function _onYTMessage(event) {
     toast('Video loaded — scrub to match start, then press START MATCH', 'ok');
     const btn = document.getElementById('btn-start-match');
     if (btn) btn.disabled = !state.matchId;
+    // Show skip banner if a match offset was waiting for video to be ready
+    if (window._pendingSkipOffset != null) {
+      _showSkipBanner(window._pendingSkipOffset);
+      window._pendingSkipOffset = null;
+    }
     // Keep _ytCurrentTime fresh — send both 'listening' + getDuration command every 150ms
     clearInterval(window._ytTimeSyncInterval);
     window._ytTimeSyncInterval = setInterval(() => {
@@ -1207,26 +1347,19 @@ async function toggleMatchActive() {
   if (!state.matchId) { toast('Select a match first','warn'); return; }
 
   if (!matchActive) {
-    // START MATCH
-    try {
-      vodStartOffset = ytPlayer.getCurrentTime();
-      matchActive = true;
-      state.time = 0; matchTime = 0;
-      // Save to DB
-      if (sb && !String(state.matchId).startsWith('local_')) {
-        const upd = { vod_start_offset: Math.round(vodStartOffset) };
-        if (vodUrl) upd.vod_url = vodUrl;
-        await sb.from('matches').update(upd).eq('id', state.matchId);
-      }
-      startPolling();
-      updateEventButtons();
-      document.getElementById('btn-start-match').textContent = '⏹ RESET OFFSET';
-      document.getElementById('btn-start-match').style.background = 'var(--muted2)';
-      document.getElementById('btn-start-match').style.color = 'var(--text)';
-      toast(`▶ Match started — offset: ${fmtTime(Math.round(vodStartOffset))} into video`, 'ok');
-    } catch(e) { toast('Error: '+e.message,'err'); }
+    // START MATCH — check if offset already exists
+    const m = matches.find(x=>x.id===state.matchId);
+    if (m?.vod_start_offset != null) {
+      // Show overwrite warning dialog
+      const existing = fmtTime(Math.round(m.vod_start_offset));
+      document.getElementById('owd-sub').textContent =
+        `This match already has a saved start point at ${existing} in the video. Setting a new one will overwrite it.`;
+      document.getElementById('offset-overwrite-dialog').classList.add('show');
+      return;
+    }
+    await _doStartMatch();
   } else {
-    // RESET (re-set the offset)
+    // RESET
     stopPolling();
     matchActive = false;
     matchTime = 0; state.time = 0;
@@ -1237,6 +1370,36 @@ async function toggleMatchActive() {
     toast('Match reset — scrub to start and press START MATCH','ok');
     renderSquadPanel();
   }
+}
+
+async function _confirmOffsetOverwrite() {
+  document.getElementById('offset-overwrite-dialog').classList.remove('show');
+  await _doStartMatch();
+}
+
+async function _doStartMatch() {
+  try {
+    vodStartOffset = ytPlayer.getCurrentTime();
+    matchActive = true;
+    state.time = 0; matchTime = 0;
+    // Save to DB
+    if (sb && !String(state.matchId).startsWith('local_')) {
+      const upd = { vod_start_offset: Math.round(vodStartOffset) };
+      if (vodUrl) upd.vod_url = vodUrl;
+      await sb.from('matches').update(upd).eq('id', state.matchId);
+      // Update local cache too
+      const m = matches.find(x=>x.id===state.matchId);
+      if (m) { m.vod_start_offset = Math.round(vodStartOffset); if (vodUrl) m.vod_url = vodUrl; }
+    }
+    startPolling();
+    updateEventButtons();
+    document.getElementById('btn-start-match').textContent = '⏹ RESET OFFSET';
+    document.getElementById('btn-start-match').style.background = 'var(--muted2)';
+    document.getElementById('btn-start-match').style.color = 'var(--text)';
+    document.getElementById('skip-to-start-banner').classList.remove('show');
+    updateVodMatchStatus();
+    toast(`▶ Match started — offset: ${fmtTime(Math.round(vodStartOffset))} into video`, 'ok');
+  } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
 function seekToMatchTime(t) {
@@ -1879,7 +2042,12 @@ function refreshDropdowns() {
   dSel.innerHTML='<option value="">— Day —</option>';
   days.filter(d=>d.tournament_id===state.tournamentId).forEach(d=>{ const o=new Option(d.name,d.id); if(d.id===state.dayId) o.selected=true; dSel.add(o); });
   mSel.innerHTML='<option value="">— Match —</option>';
-  matches.filter(m=>m.day_id===state.dayId).forEach(m=>{ const o=new Option(m.name,m.id); if(m.id===state.matchId) o.selected=true; mSel.add(o); });
+  matches.filter(m=>m.day_id===state.dayId).forEach(m=>{
+    const icon = _matchStatusIcon(m);
+    const o=new Option(icon+m.name,m.id);
+    if(m.id===state.matchId) o.selected=true;
+    mSel.add(o);
+  });
 }
 
 async function onTournamentChange(val) {
@@ -1908,6 +2076,12 @@ async function onDayChange(val) {
 async function onMatchChange(val) {
   state.matchId=val||null; state.activeTeamId=null;
   annotations=[]; matchPlayers=[];
+
+  // Always hide banners/dialogs on match change
+  document.getElementById('skip-to-start-banner').classList.remove('show');
+  document.getElementById('editor-data-dialog').classList.remove('show');
+  updateVodMatchStatus();
+
   if (state.matchId) {
     const m = matches.find(x=>x.id===state.matchId);
     if (m?.map_key) { state.mapKey=m.map_key; loadMapKey(m.map_key); }
@@ -1922,13 +2096,22 @@ async function onMatchChange(val) {
     // Restore vod_start_offset if already set
     if (m?.vod_start_offset != null) {
       vodStartOffset = m.vod_start_offset;
-      if (m.vod_url && !vodUrl) {
+      if (m.vod_url) {
+        // Auto-fill URL field
         vodUrl = m.vod_url;
         document.getElementById('vod-url-input').value = m.vod_url;
+        // Auto-load the video if not already playing
+        if (!_ytPlayerReady) {
+          _createYTPlayer(_extractYTIdSafe(m.vod_url));
+        }
       }
     }
 
     document.getElementById('btn-start-match').disabled = !_ytPlayerReady;
+
+    // Post-load: check for editor data and decide what dialog to show
+    await _postMatchLoadDialogs(m);
+    updateVodMatchStatus();
   }
   stopPolling(); matchActive=false; matchTime=0; state.time=0;
   document.getElementById('btn-start-match').textContent='▶ START MATCH';
@@ -1938,15 +2121,180 @@ async function onMatchChange(val) {
   refreshDropdowns(); renderSquadPanel(); renderTimelineMarkers(); draw();
 }
 
-function applyUrlParams() {
+function _extractYTIdSafe(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|live\/|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+async function _postMatchLoadDialogs(m) {
+  const matchTeams = teams.filter(t=>t.match_id===state.matchId);
+  const hasEditorData = matchTeams.some(t=>t.time_of_wipe!=null) ||
+                        matchPlayers.some(p=>p.time_of_loss!=null || p.kills>0) ||
+                        (m?.duration_seconds != null);
+  const hasVodOffset = m?.vod_start_offset != null;
+
+  if (hasEditorData && !hasVodOffset) {
+    // Editor data exists but no VOD session yet — ask user
+    _showEditorDataDialog(m, matchTeams);
+  } else if (hasVodOffset && _ytPlayerReady) {
+    // VOD was previously set — show skip banner
+    _showSkipBanner(m.vod_start_offset);
+  } else if (hasVodOffset && !_ytPlayerReady) {
+    // Video auto-loading, show skip banner once player is ready
+    window._pendingSkipOffset = m.vod_start_offset;
+  }
+}
+
+function _showSkipBanner(offsetSeconds) {
+  const t = fmtTime(Math.round(offsetSeconds));
+  document.getElementById('stb-text').textContent =
+    `⏱ This match starts at ${t} in the video — jump there now?`;
+  document.getElementById('skip-to-start-banner').classList.add('show');
+}
+
+function skipToMatchStart() {
+  document.getElementById('skip-to-start-banner').classList.remove('show');
+  if (!ytPlayer || !_ytPlayerReady) { toast('Video not ready yet','warn'); return; }
+  ytPlayer.seekTo(vodStartOffset, true);
+  ytPlayer.playVideo();
+  toast(`⏩ Jumped to match start (${fmtTime(Math.round(vodStartOffset))})`, 'ok');
+}
+
+function dismissSkipBanner() {
+  document.getElementById('skip-to-start-banner').classList.remove('show');
+}
+
+function _showEditorDataDialog(m, matchTeams) {
+  const wipedTeams = matchTeams.filter(t=>t.time_of_wipe!=null).length;
+  const totalTeams = matchTeams.length;
+  const deadPlayers = matchPlayers.filter(p=>p.time_of_loss!=null).length;
+  const hasDuration = m.duration_seconds != null;
+
+  const summary = document.getElementById('edd-data-summary');
+  summary.innerHTML = `
+    <div class="edd-data-row">
+      <span class="edd-data-key">Teams</span>
+      <span class="edd-data-val">${totalTeams} added</span>
+    </div>
+    <div class="edd-data-row">
+      <span class="edd-data-key">Team Wipes</span>
+      <span class="edd-data-val ${wipedTeams>0?'ok':''}">${wipedTeams} / ${totalTeams}</span>
+    </div>
+    <div class="edd-data-row">
+      <span class="edd-data-key">Player KIAs</span>
+      <span class="edd-data-val ${deadPlayers>0?'ok':''}">${deadPlayers} logged</span>
+    </div>
+    <div class="edd-data-row">
+      <span class="edd-data-key">Match End</span>
+      <span class="edd-data-val ${hasDuration?'ok':''}">${hasDuration ? fmtTime(m.duration_seconds) : 'Not set'}</span>
+    </div>`;
+  document.getElementById('editor-data-dialog').classList.add('show');
+}
+
+function continueWithEditorData() {
+  document.getElementById('editor-data-dialog').classList.remove('show');
+  toast('✓ Continuing with editor data — press START MATCH to set the video sync point', 'ok');
+  // If video is ready, nudge user toward START MATCH
+  if (_ytPlayerReady) {
+    const btn = document.getElementById('btn-start-match');
+    btn.style.animation = 'none';
+    btn.style.boxShadow = '0 0 0 2px var(--green)';
+    setTimeout(()=>{ btn.style.boxShadow=''; }, 3000);
+  }
+}
+
+function startFreshVodSession() {
+  document.getElementById('editor-data-dialog').classList.remove('show');
+  // Just dismiss — data stays in DB, VOD session starts without using old positions
+  // (They're already loaded but that's fine — user will re-log events)
+  toast('Fresh VOD session — scrub to match start and press START MATCH', 'ok');
+}
+
+// ── Match status chip ──
+function updateVodMatchStatus() {
+  const chip = document.getElementById('tb-match-status');
+  const dot = document.getElementById('tms-dot');
+  const label = document.getElementById('tms-label');
+  const vodBadge = document.getElementById('tms-vod');
+  if (!chip) return;
+  if (!state.matchId) { chip.classList.add('hidden'); return; }
+  const m = matches.find(x=>x.id===state.matchId);
+  if (!m) { chip.classList.add('hidden'); return; }
+  const matchTeams = teams.filter(t=>t.match_id===state.matchId);
+  const hasWipes = matchTeams.some(t=>t.time_of_wipe!=null);
+  const hasDuration = m.duration_seconds != null;
+  const hasTeams = matchTeams.length > 0;
+  let level, txt, color;
+  if (hasDuration && hasWipes) { level='complete'; txt='DATA COMPLETE'; color='var(--green)'; }
+  else if (hasTeams) { level='partial'; txt='IN PROGRESS'; color='var(--yellow)'; }
+  else { level='empty'; txt='NO DATA YET'; color='var(--muted2)'; }
+  chip.classList.remove('hidden');
+  dot.style.background = color;
+  label.textContent = txt;
+  if (m.vod_start_offset != null) { vodBadge.classList.remove('hidden'); }
+  else { vodBadge.classList.add('hidden'); }
+}
+
+// ── Match status icons in dropdown ──
+function _matchStatusIcon(m) {
+  const matchTeams = teams.filter(t=>t.match_id===m.id);
+  const hasWipes = matchTeams.some(t=>t.time_of_wipe!=null);
+  const hasDuration = m.duration_seconds != null;
+  const hasTeams = matchTeams.length > 0;
+  if (hasDuration && hasWipes) return '✓ ';
+  if (hasTeams) return '◐ ';
+  return '';
+}
+
+async function applyUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const ctx = mzCtxRead();
   const pTId = params.get('tournamentId')||ctx.tournamentId||null;
   const pDId = params.get('dayId')||ctx.dayId||null;
   const pMId = params.get('matchId')||ctx.matchId||null;
+
   if (pTId) { state.tournamentId=pTId; document.getElementById('sel-tournament').value=pTId||''; }
   if (pDId) { state.dayId=pDId; document.getElementById('sel-day').value=pDId||''; }
-  if (pMId) { state.matchId=pMId; document.getElementById('sel-match').value=pMId||''; if(pMId) onMatchChange(pMId); }
+
+  if (pMId) {
+    // Deep-linked to specific match
+    state.matchId=pMId;
+    document.getElementById('sel-match').value=pMId;
+    await onMatchChange(pMId);
+    return;
+  }
+
+  // No match specified — auto-load the most recently edited match
+  if (!matches.length) return;
+  const sorted = [...matches].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  const latest = sorted[0];
+  if (!latest) return;
+  const latestDay = days.find(d=>d.id===latest.day_id);
+  const latestT = latestDay && tournaments.find(t=>t.id===latestDay.tournament_id);
+  if (!latestDay || !latestT) return;
+
+  state.tournamentId = latestT.id;
+  state.dayId = latestDay.id;
+  state.matchId = latest.id;
+
+  document.getElementById('sel-tournament').value = latestT.id;
+  // Load days for this tournament if not already loaded
+  if (!days.find(d=>d.tournament_id===latestT.id)) {
+    const {data} = await sb.from('days').select('*').eq('tournament_id',latestT.id).order('order_index');
+    if (data) days.push(...data);
+  }
+  // Load matches for this day if not already loaded
+  if (!matches.find(m=>m.day_id===latestDay.id)) {
+    const {data} = await sb.from('matches').select('*').eq('day_id',latestDay.id).order('created_at');
+    if (data) matches.push(...data);
+  }
+  refreshDropdowns();
+  document.getElementById('sel-tournament').value = latestT.id;
+  document.getElementById('sel-day').value = latestDay.id;
+  document.getElementById('sel-match').value = latest.id;
+  await onMatchChange(latest.id);
+  toast(`Auto-loaded: ${latest.name}`, 'ok');
 }
 function mzCtxRead(){try{return JSON.parse(sessionStorage.getItem('mz_ctx')||'{}');}catch(e){return{};}}
 
