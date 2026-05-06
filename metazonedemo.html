@@ -83,7 +83,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #hint-path{display:none;}
 
 /* ── ONBOARDING ── */
-#onboarding{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(11,18,33,.97);border:1px solid var(--border);border-radius:12px;padding:28px 30px;z-index:200;display:flex;flex-direction:column;gap:18px;max-width:440px;width:92%;animation:obIn .35s cubic-bezier(.16,1,.3,1);}
+#onboarding{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(11,18,33,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:28px 30px;z-index:200;display:flex;flex-direction:column;gap:18px;max-width:440px;width:92%;animation:obIn .35s cubic-bezier(.16,1,.3,1);}
 #onboarding.hidden{display:none;}
 @keyframes obIn{from{opacity:0;transform:translate(-50%,-46%) scale(.97);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
 .ob-title{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px;}
@@ -120,7 +120,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .pt-body{font-family:var(--font-body);font-size:12px;color:var(--muted);line-height:1.6;}
 .pt-cta{font-family:var(--font-mono);font-size:10px;color:var(--purple);letter-spacing:.06em;margin-top:2px;}
 
-/* ── TOAST ── */
+/* ── THOUGHT BUBBLE ── */
+#thought-bubble{
+  position:absolute;bottom:70px;left:50%;transform:translateX(-50%);
+  background:rgba(11,18,33,.97);border:1px solid var(--accent);border-radius:12px;
+  padding:10px 18px;z-index:190;pointer-events:none;
+  font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:.08em;
+  display:none;align-items:center;gap:8px;
+  box-shadow:0 0 20px rgba(34,211,238,.18);
+  animation:tbIn .3s cubic-bezier(.16,1,.3,1);
+}
+#thought-bubble.show{display:flex;}
+#thought-bubble::after{
+  content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+  border-left:6px solid transparent;border-right:6px solid transparent;
+  border-top:7px solid var(--accent);
+}
+@keyframes tbIn{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 #toast{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);background:rgba(11,18,33,.97);border:1px solid var(--border);border-radius:6px;padding:9px 18px;font-family:var(--font-mono);font-size:11px;color:var(--text);letter-spacing:.06em;z-index:300;pointer-events:none;opacity:0;transition:opacity .2s;white-space:nowrap;}
 #toast.show{opacity:1;}
 #toast.ok{border-color:var(--green);color:var(--green);}
@@ -226,7 +242,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <div class="ob-title">Map your next <em>chicken dinner</em></div>
     <div class="ob-sub">A free teaser of Metazone. Draw zones, plot rotations, mark fights — share the layout with your squad in one link.</div>
     <div class="ob-features">
-      <div class="ob-feat"><span class="ob-feat-key">ZONE</span>Drag to draw a safe-zone ring with radius label</div>
+      <div class="ob-feat"><span class="ob-feat-key">ZONE</span>Drag across the diameter to draw a safe-zone ring</div>
       <div class="ob-feat"><span class="ob-feat-key" style="background:var(--orange)">PATH</span>Click waypoints → right-click to finish with arrowhead</div>
       <div class="ob-feat"><span class="ob-feat-key" style="background:var(--red)">FIGHT</span>Drop a fight marker at any engagement spot</div>
       <div class="ob-feat"><span class="ob-feat-key" style="background:var(--green);color:#020617">⎘ SHARE</span>Encode your entire layout into a URL — no login needed</div>
@@ -275,6 +291,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   </div>
 
   <div id="toast"></div>
+  <div id="thought-bubble">⬤ drag across the map to draw a zone</div>
 </div><!-- canvas-wrap -->
 
 </div><!-- #root -->
@@ -529,7 +546,11 @@ function draw(){
     ctx.restore();
   }
   st.shapes.forEach(drawShape);
-  if(st.tool==='zone'&&st.zoneStart&&st.zoneEnd){const r=Math.hypot(st.zoneEnd.x-st.zoneStart.x,st.zoneEnd.y-st.zoneStart.y);drawZone(st.zoneStart.x,st.zoneStart.y,r,st.color,st.opacity,true);}
+  if(st.tool==='zone'&&st.zoneStart&&st.zoneEnd){
+    const pcx=(st.zoneStart.x+st.zoneEnd.x)/2,pcy=(st.zoneStart.y+st.zoneEnd.y)/2;
+    const pr=Math.hypot(st.zoneEnd.x-st.zoneStart.x,st.zoneEnd.y-st.zoneStart.y)/2;
+    drawZone(pcx,pcy,pr,st.color,st.opacity,true);
+  }
   if(st.tool==='path'&&st.pathPoints.length>0){const mc=s2c(st.mouseX,st.mouseY);drawPath([...st.pathPoints,mc],st.color,st.opacity,true);}
   ctx.restore();
   document.getElementById('shape-count').textContent=st.shapes.length+' shape'+(st.shapes.length!==1?'s':'');
@@ -717,22 +738,27 @@ canvas.addEventListener('mousedown',e=>{
   const pos=getMP(e);
   if(st.spaceDown){st.isPanning=true;st.panStartX=pos.x;st.panStartY=pos.y;st.panStartPanX=st.panX;st.panStartPanY=st.panY;wrap.classList.add('panning');return;}
   isDown=true;const c=s2c(pos.x,pos.y);
-  if(st.tool==='zone'){st.zoneStart=c;st.zoneEnd=c;}
+  if(st.tool==='zone'){st.zoneStart=c;st.zoneEnd=c;st._zoneDiameter=true;}
   else if(st.tool==='path'){st.pathPoints.push({...c});}
   else if(st.tool==='pin'){const lbl=(prompt('Pin label:','')||'').trim().slice(0,24);st.shapes.push({type:'pin',x:c.x,y:c.y,label:lbl,color:st.color,opacity:st.opacity});}
   else if(st.tool==='fight'){st.shapes.push({type:'fight',x:c.x,y:c.y,color:st.color,opacity:st.opacity});}
   else if(st.tool==='erase'){const idx=hitTest(c.x,c.y);if(idx!==-1)st.shapes.splice(idx,1);}
-  if(['zone','path','pin','fight'].includes(st.tool))hideOB();
+  if(['zone','path','pin','fight'].includes(st.tool)){hideOB();dismissBubble();}
 });
 canvas.addEventListener('mousemove',e=>{
   const pos=getMP(e);st.mouseX=pos.x;st.mouseY=pos.y;
   if(st.isPanning){st.panX=st.panStartPanX+(pos.x-st.panStartX);st.panY=st.panStartPanY+(pos.y-st.panStartY);return;}
-  if(isDown&&st.tool==='zone'&&st.zoneStart)st.zoneEnd=s2c(pos.x,pos.y);
+  if(isDown&&st.tool==='zone'&&st.zoneStart){const ce=s2c(pos.x,pos.y);st.zoneEnd=ce;}
 });
 canvas.addEventListener('mouseup',e=>{
   if(st.isPanning){st.isPanning=false;wrap.classList.remove('panning');return;}
   if(!isDown)return;isDown=false;
-  if(st.tool==='zone'&&st.zoneStart&&st.zoneEnd){const r=Math.hypot(st.zoneEnd.x-st.zoneStart.x,st.zoneEnd.y-st.zoneStart.y);if(r>3)st.shapes.push({type:'zone',x:st.zoneStart.x,y:st.zoneStart.y,r,color:st.color,opacity:st.opacity});st.zoneStart=null;st.zoneEnd=null;}
+  if(st.tool==='zone'&&st.zoneStart&&st.zoneEnd){
+    const cx=(st.zoneStart.x+st.zoneEnd.x)/2,cy=(st.zoneStart.y+st.zoneEnd.y)/2;
+    const r=Math.hypot(st.zoneEnd.x-st.zoneStart.x,st.zoneEnd.y-st.zoneStart.y)/2;
+    if(r>3)st.shapes.push({type:'zone',x:cx,y:cy,r,color:st.color,opacity:st.opacity});
+    st.zoneStart=null;st.zoneEnd=null;
+  }
 });
 canvas.addEventListener('dblclick',e=>{if(st.tool==='path'&&st.pathPoints.length>=2)finishPath();});
 canvas.addEventListener('contextmenu',e=>{e.preventDefault();if(st.tool==='path'&&st.pathPoints.length>=2)finishPath();});
@@ -795,9 +821,25 @@ document.addEventListener('click',e=>{if(!keysPanel.contains(e.target)&&e.target
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ONBOARDING
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const _tb=document.getElementById('thought-bubble');
+let _tbDismissed=false;
 function hideOB(){document.getElementById('onboarding').classList.add('hidden');}
-document.getElementById('ob-start').addEventListener('click',hideOB);
-document.getElementById('ob-skip').addEventListener('click',hideOB);
+function showThoughtBubble(){
+  if(_tbDismissed)return;
+  _tb.classList.add('show');
+  setTimeout(()=>{_tb.classList.remove('show');_tbDismissed=true;},6000);
+}
+function dismissBubble(){_tb.classList.remove('show');_tbDismissed=true;}
+
+document.getElementById('ob-start').addEventListener('click',()=>{
+  st.shapes=[];
+  hideOB();
+  showThoughtBubble();
+});
+document.getElementById('ob-skip').addEventListener('click',()=>{
+  st.shapes=[];
+  hideOB();
+});
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // INIT
