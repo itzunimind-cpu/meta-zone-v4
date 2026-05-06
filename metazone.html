@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Metazone — Match intelligence for BGMI</title>
+<title>Metazone · Match intelligence for BGMI</title>
 <meta name="description" content="The operating system for BGMI coaches and analysts. Annotate VODs, log every rotation, score every match. One tool, instead of seven.">
 
 <!-- Fonts: Fraunces (display, characterful serif) + Inter Tight (body) + JetBrains Mono (mono) -->
@@ -671,9 +671,10 @@ section { position: relative; z-index: 2; }
 .thesis-hd em { font-style: italic; color: var(--accent); font-weight: 400; }
 .thesis-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  grid-template-columns: 1fr;
+  gap: 40px;
   align-items: start;
+  max-width: 720px;
 }
 .thesis-prose p {
   font-size: 17px;
@@ -1265,14 +1266,14 @@ footer {
         Stop reconstructing matches from <em>screenshots.</em>
       </h1>
       <p class="hero-sub">
-        Metazone is the operating system for BGMI coaches and analysts. Annotate VODs, log every rotation, score every match, and build standings — in one tool, instead of seven.
+        Metazone is the operating system for BGMI coaches and analysts. Annotate VODs, log every rotation, score every match, and build standings in one tool, instead of seven.
       </p>
       <div class="hero-actions">
         <a href="#access" class="btn btn-primary">
           Request access
           <svg class="arr" viewBox="0 0 16 16" fill="none"><path d="M1 8h13M9 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
         </a>
-        <a href="#editor" class="btn btn-ghost">Inside the tool</a>
+        <a href="#editor" class="btn btn-ghost" id="hero-inside-btn">Inside the tool</a>
       </div>
       <div class="hero-meta">
         <span><span class="live"></span>In active use with select BGMI rosters</span>
@@ -1353,7 +1354,7 @@ footer {
     <div class="snap-cell">
       <div class="snap-num">03 / Score</div>
       <div class="snap-title">Standings without the spreadsheet.</div>
-      <div class="snap-desc">KP, PP, total — calculated live from the match log. Tournament cascades by day and match. Standings that match the broadcast.</div>
+      <div class="snap-desc">KP, PP, total, calculated live from the match log. Tournament cascades by day and match. Standings that match the broadcast.</div>
     </div>
     <div class="snap-cell">
       <div class="snap-num">04 / Decide</div>
@@ -1372,7 +1373,7 @@ footer {
       </div>
       <div class="right">
         <h2>Built for the way <em>analysts actually work.</em></h2>
-        <p style="margin-top:24px;">These aren't mockups for a pitch deck. This is the working surface. Same buttons, same colors, same logic — recreated faithfully so you can see exactly what your staff will be using.</p>
+        <p style="margin-top:24px;">These aren't mockups for a pitch deck. This is the working surface. Same buttons, same colors, same logic, recreated faithfully so you can see exactly what your staff will be using.</p>
       </div>
     </div>
   </div>
@@ -1387,7 +1388,7 @@ footer {
         <p>The core annotation surface. Pick a team, pick a tool, draw on the map. Every event you log shows up on the right rail, timestamped and editable. The match score updates live in the header.</p>
         <ul class="widget-feats">
           <li>16 teams pre-loaded from the tournament roster</li>
-          <li>Brush, path, pin, zone, erase — keyboard shortcuts for everything</li>
+          <li>Brush, path, pin, zone, erase · keyboard shortcuts for everything</li>
           <li>Event log with filters by team, kind, and zone phase</li>
           <li>Auto-saves every 4 seconds. No "did I save that" panic.</li>
         </ul>
@@ -1679,7 +1680,7 @@ footer {
               <div class="an-bar dim"><span class="name">Z6 LATE</span><div class="track"><div class="fill" data-w="20%"></div></div><span class="v">5</span></div>
             </div>
             <div class="an-callout">
-              Alpha is dying disproportionately in zone 4 — twice the lobby average. The compound rotation at 18:40 is consistently late. Try anchoring earlier on day 4.
+              Alpha is dying disproportionately in zone 4, twice the lobby average. The compound rotation at 18:40 is consistently late. Try anchoring earlier on day 4.
             </div>
           </div>
         </div>
@@ -1696,7 +1697,7 @@ footer {
     <div class="reveal">
       <div class="eyebrow" style="margin-bottom:24px;">Why we built it</div>
       <h2 class="thesis-hd">
-        Indian BGMI is, mechanically, among the best in the world. <em>Decision-making is not.</em>
+        Indian BGMI is, mechanically, among the best in the world.<br><em style="white-space:nowrap;">Decision-making is not.</em>
       </h2>
     </div>
 
@@ -1704,15 +1705,10 @@ footer {
       <div class="thesis-prose reveal">
         <p>Wins are celebrated without understanding why. Losses repeat without a structure to examine them. Coaches track scrims in voice notes. Analysts reconstruct match data from screenshots and Excel sheets that nobody opens twice.</p>
         <p><strong>This is not a talent problem.</strong> It is an infrastructure problem.</p>
-        <p>Metazone is the infrastructure. A human watches the match, logs the kill, draws the path, marks the zone. Metazone collects that work and structures it — clearly, consistently, in one place. So the next decision is informed by the last hundred.</p>
+        <p>Metazone is the infrastructure. A human watches the match, logs the kill, draws the path, marks the zone. Metazone collects that work and structures it clearly, consistently, in one place. So the next decision is informed by the last hundred.</p>
         <p>It isn't an AI insight tool. No algorithm can read the pressure of a zone or the weight of a rotation call. <strong>A coach can.</strong> Metazone makes sure the coach is looking at the right numbers when they do.</p>
       </div>
 
-      <aside class="thesis-side reveal">
-        <div class="label">Pilot · BGMS season 2</div>
-        <div class="quote">"Before this we'd argue about what happened in M-03. Now we open the timeline and the argument is over in fifteen seconds."</div>
-        <div class="attr">Head Analyst · competitive BGMI roster</div>
-      </aside>
     </div>
   </div>
 </section>
@@ -1767,11 +1763,11 @@ footer {
     <div class="access-card featured">
       <div class="tag tag-beta">Beta Access</div>
       <h4>Free access, right now.</h4>
-      <p class="who">We are in active beta. Join as a tester and get full access to the entire platform for free during the beta period — every module, every feature, no limits.</p>
+      <p class="who">We are in active beta. Join as a tester and get full access to the entire platform for free during the beta period: every module, every feature, no limits.</p>
       <ul>
         <li>Full access to Editor, VOD Review, and Analytics</li>
         <li>Unlimited matches and tournaments</li>
-        <li>Direct line to the team — your feedback shapes the product</li>
+        <li>Direct line to the team · your feedback shapes the product</li>
         <li>Free for the entire duration of the beta period</li>
       </ul>
       <a href="#" class="btn btn-primary" style="width:100%;justify-content:center;">
@@ -1856,7 +1852,7 @@ footer {
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
         <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="#22d3ee" stroke-width="1.5" fill="none"/>
       </svg>
-      Metazone <span style="color:var(--ink-4);font-weight:400;font-size:13px;font-family:var(--f-mono);letter-spacing:0.1em;">— BGMI INTELLIGENCE</span>
+      Metazone <span style="color:var(--ink-4);font-weight:400;font-size:13px;font-family:var(--f-mono);letter-spacing:0.1em;">BGMI INTELLIGENCE</span>
     </div>
     <a href="metazonedemo.html" class="nav-demo" style="font-size:10px;padding:8px 16px;">→ Try the Demo</a>
     <div class="footer-meta">© 2026 · built in india, for indian competitive BGMI</div>
@@ -1989,7 +1985,7 @@ if (nm) noteIo.observe(nm);
           <div class="wl-badge">Early Access</div>
         </div>
         <div class="wl-headline">You've seen <em>10%</em> of what this tool does.</div>
-        <div class="wl-sub">Join the waitlist. When beta profiles drop, you'll be the first to know — straight to your WhatsApp.</div>
+        <div class="wl-sub">Join the waitlist. When beta profiles drop, you'll be the first to know, straight to your WhatsApp.</div>
       </div>
       <div class="wl-features">
         <div class="wl-feat hi">🎬 VOD Sync</div>
@@ -2023,7 +2019,7 @@ if (nm) noteIo.observe(nm);
     <div id="wl-success">
       <div class="wl-success-icon">✦</div>
       <div class="wl-success-title">Welcome to the <em>Metazone</em><br>Intelligence Ecosystem.</div>
-      <div class="wl-success-msg">Our representatives will contact you as soon as new beta profiles drop. Keep your WhatsApp notifications on — we don't spam, we only ping when it matters.</div>
+      <div class="wl-success-msg">Our representatives will contact you as soon as new beta profiles drop. Keep your WhatsApp notifications on · we don't spam, we only ping when it matters.</div>
       <a class="wl-success-wa" id="wl-wa-confirm" href="#" target="_blank" rel="noopener">
         <span>💬</span> Confirm on WhatsApp
       </a>
@@ -2034,8 +2030,8 @@ if (nm) noteIo.observe(nm);
 
 <script>
 // ── WAITLIST MODAL ──
-const WA_NUMBER   = '917066279109';
-const OWNER_EMAIL = 'motimedia28@gmail.com';
+const WA_NUMBER   = '919999999999';
+const OWNER_EMAIL = 'hello@metazone.app';
 
 function openWaitlist() {
   document.getElementById('wl-overlay').classList.add('show');
@@ -2048,6 +2044,7 @@ function closeWaitlist() {
 }
 
 document.querySelectorAll('.btn-primary, .btn-ghost, .nav-cta').forEach(btn => {
+  if (btn.id === 'hero-inside-btn') return;
   btn.addEventListener('click', e => { e.preventDefault(); openWaitlist(); });
 });
 
@@ -2070,7 +2067,7 @@ document.getElementById('wl-submit').addEventListener('click', () => {
   try {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
-    iframe.src = 'mailto:' + OWNER_EMAIL + '?subject=' + encodeURIComponent('Metazone Waitlist — New Signup') + '&body=' + encodeURIComponent('New signup:\n\nName: ' + name + '\nWhatsApp: ' + wa + '\nEmail: ' + email);
+    iframe.src = 'mailto:' + OWNER_EMAIL + '?subject=' + encodeURIComponent('Metazone Waitlist · New Signup') + '&body=' + encodeURIComponent('New signup:\n\nName: ' + name + '\nWhatsApp: ' + wa + '\nEmail: ' + email);
     document.body.appendChild(iframe);
     setTimeout(() => iframe.remove(), 3000);
   } catch(e) {}
